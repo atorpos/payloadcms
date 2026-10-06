@@ -40,6 +40,7 @@ installs the app against them. This is the same approach Payload's CI uses to te
 | `deploy/setup-app-server.sh`               | One-time bootstrap of a fresh EC2 (Docker, swap, clone)                                |
 | `deploy/check-db.sh`                       | Checks that the app EC2 can reach and write to MongoDB                                 |
 | `deploy/deploy.sh`                         | Build + (re)start + wait until healthy                                                 |
+| `deploy/send-test-email.sh`                | Sends a test email through SendGrid (see "Email (SendGrid)")                           |
 | `deploy/import-events.sh`                  | Runs the events import on the server                                                   |
 | `deploy/mongodb/create-payload-user.js`    | Creates the MongoDB user for Payload (run on the DB EC2)                               |
 | `scripts/pack-local-packages.mjs`          | Packs `packages/*` into tarballs for the app (used by the Dockerfile)                  |
@@ -524,10 +525,28 @@ Payload sends "forgot password" emails. Without an email service it only writes 
    need your two-factor code.
 
 Payload sends at most one reset email per account every 15 seconds, and answers the same way for unknown
-addresses, so the form doesn't reveal which accounts exist. If no email arrives, look for
-`SendGrid rejected the email` in `docker compose logs cms`: `401`/`403` means the key is wrong or lacks the
-Mail Send permission; a sender error means `EMAIL_FROM_ADDRESS` isn't verified. SendGrid's _Activity Feed_
-shows whether an email was delivered.
+addresses, so the form doesn't reveal which accounts exist.
+
+**If no email arrives:**
+
+1. Send a test email from the app server: `./deploy/send-test-email.sh you@example.com`. It prints SendGrid's
+   answer and the message ID. The CMS logs the same ID for every email (`SendGrid accepted the email` in
+   `docker compose logs cms`).
+2. `SendGrid rejected the email`: `401`/`403` means the key is wrong or lacks the Mail Send permission; a
+   sender error means `EMAIL_FROM_ADDRESS` isn't verified.
+3. Accepted means only that SendGrid queued the email. Open it in SendGrid under _Activity → Email Logs_:
+
+   | What SendGrid shows                                           | Meaning                                                                                                                                                           |
+   | ------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+   | **Delivered**                                                 | The recipient's server took it: look in spam, promotions and filters                                                                                              |
+   | Only **Processed**, sending IP **N/A**, banner "under review" | SendGrid hasn't sent it. New accounts are reviewed before they may send; answer the ticket under _ticket history_ / contact support. Nothing to change in the CMS |
+   | **Deferred**                                                  | The recipient's server asked to retry later; SendGrid retries for up to 72 hours                                                                                  |
+   | **Dropped**                                                   | The address is on a suppression list (_Suppressions_) after an earlier bounce, block or spam report: remove it there                                              |
+   | **Bounced** / **Blocked**                                     | The recipient's server refused it; the details give the reason, often a missing domain authentication                                                             |
+
+Send from an address on your own domain and authenticate that domain (step 1). Emails "from" a gmail.com,
+outlook.com, icloud.com or similar address sent through SendGrid are usually rejected or hidden by the
+recipient, so `./deploy/deploy.sh` warns about them.
 
 ## Troubleshooting
 

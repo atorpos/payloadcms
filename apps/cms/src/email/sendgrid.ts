@@ -19,7 +19,7 @@ export const sendgridAdapter = (): EmailAdapter | undefined => {
   const defaultFromAddress = process.env.EMAIL_FROM_ADDRESS || ''
   const defaultFromName = process.env.EMAIL_FROM_NAME || 'Payload CMS'
 
-  return () => ({
+  return ({ payload }) => ({
     defaultFromAddress,
     defaultFromName,
     name: 'sendgrid',
@@ -57,7 +57,16 @@ export const sendgridAdapter = (): EmailAdapter | undefined => {
         throw new Error(`SendGrid rejected the email (${res.status}): ${await res.text()}`)
       }
 
-      return { messageID: res.headers.get('x-message-id') }
+      // Accepted is not delivered: search this ID in SendGrid's Activity Feed to see what happened next
+      const messageID = res.headers.get('x-message-id')
+      payload.logger.info({
+        messageID,
+        msg: 'SendGrid accepted the email',
+        subject: message.subject,
+        to: toAddresses({ value: message.to }).map(({ email }) => email),
+      })
+
+      return { messageID }
     },
   })
 }

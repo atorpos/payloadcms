@@ -84,6 +84,16 @@ validate_env() {
     has_error=true
   fi
 
+  # A warning, not an error: SendGrid accepts these emails, but mailbox providers often reject them
+  case "${email_from_address#*@}" in
+    gmail.com | googlemail.com | yahoo.* | outlook.com | hotmail.* | live.com | icloud.com | me.com | aol.com)
+      if [[ -n "$sendgrid_api_key" ]]; then
+        echo "Warning: EMAIL_FROM_ADDRESS is a free email address. Emails from it through SendGrid are often" >&2
+        echo "         rejected or hidden by the recipient. Use an address on your own domain (README: \"Email (SendGrid)\")." >&2
+      fi
+      ;;
+  esac
+
   if [[ "$has_error" == true ]]; then
     exit 1
   fi
