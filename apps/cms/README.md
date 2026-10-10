@@ -1,0 +1,732 @@
+# Payload CMS on EC2 (MongoDB on a separate EC2)
+
+This folder is a deployable Payload app that runs **this branch's `packages/` source**. It's not
+the npm release. The Docker build compiles `payload`, `@payloadcms/next`, `ui`, `db-mongodb`,
+`richtext-lexical`, `storage-s3`, `transformer-sharp`, `translations` and `graphql` from `packages/`,
+packs them into tarballs and installs the app against them. This is the same approach Payload's CI
+uses to test templates.
+
+```
+                 Internet
+                    │  80 / 443
+        ┌───────────▼─────────────── EC2 #2: app server ─┐
+        │  caddy (reverse proxy, automatic HTTPS)        │
+        │    └─► cms (Next.js + Payload, port 3006)      │
+        │          └─ /app/media  → docker volume "media"│
+        └───────────┬────────────────────────────────────┘
+                    │ 27017 (private VPC network only)
+        ┌───────────▼─────────────── EC2 #1: database ───┐
+        │  MongoDB (auth enabled)                        │
+        └────────────────────────────────────────────────┘
+```
+
+| File                                       | Purpose                                                                                |
+| ------------------------------------------ | -------------------------------------------------------------------------------------- |
+| `src/payload.config.ts`                    | Payload config: MongoDB via `DATABASE_URL`, `SERVER_URL`, CORS/CSRF                    |
+| `src/endpoints/health.ts`                  | `GET /api/health`: pings MongoDB (used by the Docker healthcheck)                      |
+| `src/storage/s3.ts`                        | Optional S3 storage for uploads, turned on by `S3_BUCKET`                              |
+| `src/personal/`                            | Pages, settings and projects of the personal website (see "Personal website")          |
+| `src/collections/Posts.ts`                 | Blog posts for the personal website (see "Personal website")                           |
+| `scripts/import-personal-website.ts`       | Copies the personal website's current content into the CMS (see "Personal website")    |
+| `src/collections/Pages.ts`, `src/sites.ts` | Pages for each website and app (see "Pages for several websites and apps")             |
+| `src/collections/Profiles.ts`              | Profiles: bio, links, skills, work history, education                                  |
+| `src/collections/Clients.ts`               | Private client records: contacts, business type, importance (see "Clients and events") |
+| `src/collections/Events.ts`                | Private records of sales events and exhibitions worldwide                              |
+| `scripts/import-events.ts`                 | Imports events from a JSON file (see "Importing events")                               |
+| `src/vigor/`, `src/locales.ts`             | Content of the Vigor website in four languages (see "Vigor website")                   |
+| `scripts/import-vigor.ts`                  | Copies the Vigor website's current content into the CMS (see "Vigor website")          |
+| `src/timezones.ts`                         | Time zones offered for event dates                                                     |
+| `src/proxy.ts`, `src/twoFactor/`           | Two-factor authentication for every login (see "Two-factor authentication")            |
+| `src/email/sendgrid.ts`                    | Sends emails such as "forgot password" through SendGrid (see "Email (SendGrid)")       |
+| `src/hooks/revalidateWebsite.ts`           | Tells the personal website to refresh its pages when its content changes               |
+| `Dockerfile`                               | Multi-stage build from the repo root → small standalone image                          |
+| `docker-compose.yml`, `Caddyfile`          | Production stack on the app EC2                                                        |
+| `.env.example`                             | Every setting the server needs                                                         |
+| `deploy/setup-app-server.sh`               | One-time bootstrap of a fresh EC2 (Docker, swap, clone)                                |
+| `deploy/check-db.sh`                       | Checks that the app EC2 can reach and write to MongoDB                                 |
+| `deploy/deploy.sh`                         | Build + (re)start + wait until healthy                                                 |
+| `deploy/import-events.sh`                  | Runs the events import on the server                                                   |
+| `deploy/import-personal-website.sh`        | Runs the personal website import on the server                                         |
+| `deploy/import-vigor.sh`                   | Runs the Vigor website import on the server                                            |
+| `deploy/mongodb/create-payload-user.js`    | Creates the MongoDB user for Payload (run on the DB EC2)                               |
+| `scripts/pack-local-packages.mjs`          | Packs `packages/*` into tarballs for the app (used by the Dockerfile)                  |
+
+---
+
+## 1. AWS networking (security groups)
+
+Put both instances in the **same VPC** and connect through the database's **private IP**.
+
+| Security group | Inbound rule                  | Source                                          |
+| -------------- | ----------------------------- | ----------------------------------------------- |
+| `cms-app-sg`   | TCP 80, TCP 443 (and UDP 443) | `0.0.0.0/0` (and `::/0` for IPv6)               |
+| `cms-app-sg`   | TCP 22                        | your IP only                                    |
+| `mongodb-sg`   | TCP 27017                     | **the security group `cms-app-sg`** (not an IP) |
+| `mongodb-sg`   | TCP 22                        | your IP only                                    |
+
+Never open 27017 to `0.0.0.0/0`.
+
+App instance size: the Docker build compiles the admin panel and needs about 6 GB of memory.
+Use **t3.large / t4g.large (8 GB)** or bigger. The setup script adds 8 GB of swap, so a
+4 GB instance also works, but builds will be slower. Give it at least **30 GB** of disk.
+
+## 2. Prepare MongoDB (EC2 #1)
+
+SSH into the MongoDB server.
+
+**a) Make sure authentication is enabled.** If `mongosh` connects without credentials and
+`show dbs` works, auth is off. Create an admin first while auth is still off:
+
+```bash
+mongosh --eval 'db.getSiblingDB("admin").createUser({ user: "admin", pwd: passwordPrompt(), roles: ["root"] })'
+```
+
+**b) Edit `/etc/mongod.conf`** so MongoDB listens on its private IP and requires auth:
+
+```yaml
+net:
+  port: 27017
+  bindIp: 127.0.0.1,10.0.1.23 # <- this server's PRIVATE IP (hostname -I)
+security:
+  authorization: enabled
+```
+
+```bash
+sudo systemctl restart mongod
+```
+
+**c) Create the Payload user** (copy `deploy/mongodb/create-payload-user.js` to the server):
+
+```bash
+PAYLOAD_DB_PASSWORD='choose-a-strong-password' \
+  mongosh -u admin -p --authenticationDatabase admin create-payload-user.js
+```
+
+The user only gets `readWrite` on the `payload` database.
+
+> Payload also runs on a standalone (non-replica-set) MongoDB. Transactions are turned off
+> automatically in that case. If you later convert it to a replica set, add
+> `&replicaSet=<name>` to `DATABASE_URL` and Payload will use transactions.
+
+## 3. Bootstrap the app server (EC2 #2, once)
+
+Works on **Amazon Linux 2023** and **Ubuntu 22.04/24.04**, x86_64 or ARM (Graviton):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/atorpos/payloadcms/op-uat-mongodb/apps/cms/deploy/setup-app-server.sh -o setup.sh
+sudo bash setup.sh                      # or: sudo bash setup.sh <repo-url> <branch>
+exit                                    # log out and back in so docker works without sudo
+```
+
+It installs Docker (with Compose and Buildx), git and 8 GB of swap, then clones the repo to
+`~/payloadcms` and creates `apps/cms/.env` from the example. If the repo is private, clone it
+yourself first with a deploy key or token; the script skips cloning when `~/payloadcms` exists.
+
+## 4. Configure `.env`
+
+```bash
+cd ~/payloadcms/apps/cms
+nano .env
+```
+
+| Variable                                                    | Value                                                                                                          |
+| ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                                              | `mongodb://payload:<password>@<mongo-private-ip>:27017/payload?authSource=admin`                               |
+| `PAYLOAD_SECRET`                                            | output of `openssl rand -hex 32`. Keep it stable; changing it logs everyone out                                |
+| `SERVER_URL`                                                | exactly what you type in the browser, no trailing slash: `http://<ec2-public-ip>` or `https://cms.example.com` |
+| `SITE_ADDRESS`                                              | `:80` for plain HTTP on the IP, or `cms.example.com` for automatic HTTPS                                       |
+| `CORS_ORIGINS`                                              | optional, comma-separated frontend origins that call the API with cookies                                      |
+| `WEBSITE_URL`, `WEBSITE_REVALIDATE_SECRET`                  | optional, refresh the personal website as soon as its content changes (see "Personal website")                 |
+| `VIGOR_WEBSITE_URL`, `VIGOR_WEBSITE_REVALIDATE_SECRET`      | optional, refresh the Vigor website as soon as its content changes (see "Vigor website")                       |
+| `SENDGRID_API_KEY`, `EMAIL_FROM_ADDRESS`, `EMAIL_FROM_NAME` | optional, send "forgot password" emails (see "Email (SendGrid)")                                               |
+
+URL-encode special characters in the MongoDB password: `@` → `%40`, `:` → `%3A`, `/` → `%2F`,
+`#` → `%23`, `?` → `%3F`.
+
+Then verify the connection:
+
+```bash
+./deploy/check-db.sh
+# ping ok: true / database: payload / authenticated as: [...] / write access: ok
+```
+
+## 5. Deploy
+
+```bash
+./deploy/deploy.sh
+```
+
+The first build takes about 5–10 minutes (it compiles the Payload packages). Later builds reuse
+Docker's cache: when only the app changes (e.g. `apps/cms/src`), the package build is skipped and a
+redeploy takes a minute or two. Changes under `packages/` rebuild the packages. When the script
+prints `CMS is healthy`, open `SERVER_URL/admin` and create the first admin user.
+
+## 6. Domain + HTTPS
+
+1. Create a DNS `A` record `cms.example.com` → the app EC2's **Elastic IP**. Allocate one so
+   the address survives instance stop/start.
+2. In `.env` set `SITE_ADDRESS=cms.example.com` and `SERVER_URL=https://cms.example.com`.
+3. `./deploy/deploy.sh`. Caddy obtains and renews the Let's Encrypt certificate by itself.
+
+With an `https://` `SERVER_URL`, the auth cookie is marked `Secure` automatically.
+
+## Day-to-day operations
+
+```bash
+cd ~/payloadcms/apps/cms
+./deploy/deploy.sh --pull          # update to the latest commit of the branch and redeploy
+docker compose ps                  # status (cms should be "healthy")
+docker compose logs -f cms         # application logs
+docker compose restart cms         # restart without rebuilding
+curl -s localhost/api/health       # {"database":"up","status":"ok"}
+```
+
+**Backups**
+
+- Database, on the MongoDB EC2 (or schedule it with cron):
+  `mongodump --uri 'mongodb://admin:<pw>@127.0.0.1:27017/?authSource=admin' --db payload --archive=payload-$(date +%F).gz --gzip`
+- Uploaded media, on the app EC2 (only while uploads are stored locally, not in S3):
+  `docker run --rm -v payload-cms_media:/media -v "$PWD":/backup busybox tar czf /backup/media-$(date +%F).tgz -C /media .`
+- Or snapshot both EBS volumes with AWS Backup. With S3 storage, turn on bucket versioning instead.
+
+## Uploads in S3
+
+By default, uploads are saved on the app server. Set `S3_BUCKET` to store them in S3 instead:
+
+1. You upload a file in the admin panel (or `POST /api/media`).
+2. Payload writes it to `s3://<S3_BUCKET>/<S3_PREFIX>/<filename>`.
+3. The media document in MongoDB records `filename`, `prefix` (the S3 folder), `mimeType`,
+   `filesize`, `width`/`height` and `url`.
+4. Every read (REST, GraphQL, Local API) returns `url` as the public S3 or CloudFront address
+   (`<S3_PUBLIC_URL>/<prefix>/<filename>`). Frontends load the file straight from there,
+   not through Payload.
+5. Deleting the document deletes the object in S3. Replacing the file replaces the object.
+
+### a) Create the bucket
+
+Create it in the same region as the EC2. Keep **Object Ownership = Bucket owner enforced**
+(the default; ACLs off).
+
+To make files public, pick **one** option:
+
+- **Simple: public bucket policy.** Under _Block public access_, untick only the two
+  _"...bucket policies"_ options, then add this bucket policy. It makes only the `media/`
+  folder readable:
+
+  ```json
+  {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Sid": "PublicReadMedia",
+        "Effect": "Allow",
+        "Principal": "*",
+        "Action": "s3:GetObject",
+        "Resource": "arn:aws:s3:::YOUR-BUCKET/media/*"
+      }
+    ]
+  }
+  ```
+
+- **Recommended for production: CloudFront.** Keep the bucket fully private, create a
+  CloudFront distribution with an _Origin Access Control_ to the bucket, and set
+  `S3_PUBLIC_URL=https://<distribution>.cloudfront.net` (or your CDN domain). You get HTTPS on
+  your own domain, caching, and no public bucket.
+
+### b) Give the app EC2 access (IAM role, no keys in `.env`)
+
+Create an IAM role for EC2 with this policy and attach it to the **app** instance
+(_Actions → Security → Modify IAM role_):
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": ["s3:PutObject", "s3:GetObject", "s3:DeleteObject", "s3:AbortMultipartUpload"],
+      "Resource": "arn:aws:s3:::YOUR-BUCKET/media/*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": "s3:ListBucket",
+      "Resource": "arn:aws:s3:::YOUR-BUCKET",
+      "Condition": { "StringLike": { "s3:prefix": "media/*" } }
+    }
+  ]
+}
+```
+
+Docker containers can only read the instance role when the metadata hop limit is **2**. Many
+AMIs, including Ubuntu, default to 1. Run this once from any machine with the AWS CLI:
+
+```bash
+aws ec2 modify-instance-metadata-options --instance-id <app-instance-id> \
+  --http-tokens required --http-put-response-hop-limit 2 --http-endpoint enabled
+```
+
+Without a role, you can instead put an IAM user's `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY`
+in `.env`.
+
+### c) Configure and redeploy
+
+```bash
+# apps/cms/.env
+S3_BUCKET=your-bucket
+S3_REGION=ap-southeast-1
+S3_PREFIX=media
+S3_PUBLIC_URL=            # empty = https://your-bucket.s3.ap-southeast-1.amazonaws.com
+```
+
+```bash
+./deploy/deploy.sh
+```
+
+Upload an image in the admin panel. `GET /api/media` should now return `"url": "https://…"`
+pointing at S3, and the file should be in the bucket under `media/`.
+
+### d) Files uploaded before switching
+
+Older uploads are still in the local `media` volume. Copy them to the bucket and record their
+folder, so their URLs keep working:
+
+```bash
+# on the app EC2 (uses the instance role)
+docker run --rm -v payload-cms_media:/media amazon/aws-cli s3 sync /media s3://YOUR-BUCKET/media/
+# on the MongoDB EC2 (use your own container name and admin credentials)
+docker exec -it mongo mongosh -u admin -p --authenticationDatabase admin payload \
+  --eval 'db.media.updateMany({ prefix: { $in: [null, ""] } }, { $set: { prefix: "media" } })'
+```
+
+S3-compatible storage (Cloudflare R2, MinIO, …) works too. Set `S3_ENDPOINT`, and for MinIO
+also `S3_FORCE_PATH_STYLE=true`.
+
+## Personal website
+
+Everything under **Personal website** in the admin panel is the content of the personal website
+([atorpos/personalwebsite](https://github.com/atorpos/personalwebsite), setup in its `docs/payload-cms.md`), together
+with its pages in **Pages**. The code is in `src/personal/` and `src/collections/Posts.ts`. The website reads published
+content without logging in; drafts are only visible to logged-in users.
+
+| In the admin panel | On the website                                                                                              |
+| ------------------ | ----------------------------------------------------------------------------------------------------------- |
+| Posts              | The blog: `/blog/<slug>`, the post lists, tag pages, featured posts on the home page, the RSS feed          |
+| Projects           | The cards on `/projects` and a page per project at `/projects/<slug>`                                       |
+| Site settings      | Site name, browser tab titles, default description, X handle, main menu and social links                    |
+| Home page          | `/`: name, job titles, introduction, button (e.g. your resume), key figures, featured posts, logos          |
+| About page         | `/about`: photo, numbered sections, call to action, skill sets with levels and icons, employment, education |
+| Services page      | `/services`: introduction, button and a tile per service                                                    |
+| Projects page      | The texts of `/projects` and the GitHub repositories shown there                                            |
+| Blog page          | The texts of `/blog`                                                                                        |
+| Contact page       | The texts of `/contact` and the contact details next to the form                                            |
+| Pages              | Pages whose **Sites** include **Personal website**, at `/<slug>`, e.g. `/privacy-policy`                    |
+
+**Pages and Site settings** have no drafts (with MongoDB, Payload gives every global with drafts an index with the same
+name, so all but one of them fail to build): **Save** puts the change live, and the **Versions** tab can restore an
+earlier save. Until a page or Site settings is saved for the first time, the website keeps showing its own Markdown
+file or `theme.config.js`, so pages can move to the CMS one at a time.
+
+**Posts and projects** have drafts: **Save Draft** keeps changes private, **Publish** makes them public.
+
+- **Icons** (skills, services, "Expert In" logos, project logos) must be SVG files; only those can be chosen. The
+  website puts them inline so they take the theme's colors.
+- **Buttons** link to a page of the website (`/contact`), a full URL, or an uploaded file such as a resume.
+- **Menu icons, social platforms and contact detail types** are in `src/personal/options.ts`. The website maps each
+  value to an icon (`components/SiteIcons.jsx`): when you add one, add it there too.
+
+### Copying the website's content into the CMS (once)
+
+`deploy/import-personal-website.sh` reads the website repo the way the website does (`theme.config.js`, the pages in
+`content/` and the projects in `content/projects`), uploads its images and icons to Media and saves everything;
+projects are published. On the app server:
+
+```bash
+cd ~/payloadcms/apps/cms
+./deploy/import-personal-website.sh https://github.com/atorpos/personalwebsite --dry-run   # preview, nothing is saved
+./deploy/import-personal-website.sh https://github.com/atorpos/personalwebsite
+```
+
+- The repo is cloned from its default branch; use `<url>#<branch>` for another branch, or the path of a checkout on
+  the server. A private repo needs a URL with access, e.g. `https://<token>@github.com/...`.
+- Pages and Site settings that were already saved in the CMS, projects with the same slug and files already in Media
+  are skipped, so running it again is safe and keeps your edits.
+- The output ends with what to check in the admin panel, e.g. a project logo that isn't an SVG.
+- Blog posts aren't copied; the website keeps showing its Markdown posts next to the CMS's.
+
+Locally, run `pnpm payload run scripts/import-personal-website.ts <website-folder> [--dry-run]` in this folder instead.
+
+### Posts
+
+| Field        | On the website                                                                                      |
+| ------------ | --------------------------------------------------------------------------------------------------- |
+| Title        | Post title                                                                                          |
+| Description  | Text on post cards, in search results and in the RSS feed                                           |
+| Images       | The first one is the cover on post cards; all of them form the gallery at the top of the post       |
+| Content      | The post: headings, lists, quotes, links (to URLs, posts or projects), images, code, YouTube videos |
+| Slug         | The URL, `/blog/<slug>`. Generated from the title once and kept when the title changes              |
+| Published At | The post date. Filled in when the post is first published                                           |
+| Featured     | Lists the post under "Featured" on the home page                                                    |
+| Tags         | Tag chips. A tag links to `/tags/<tag>` when the website has `content/tags/<tag>.md`                |
+| SEO          | Optional title and description for search engines and link previews                                 |
+
+### Refreshing the website
+
+The website refreshes its pages from the CMS about once a minute. To update it the moment you save a page or Site
+settings, or publish, edit, unpublish or delete a post, project or page, give both sides the same secret
+(`openssl rand -hex 32`):
+
+1. Website: set `REVALIDATE_SECRET=<secret>` and redeploy it.
+2. CMS `.env`: set `WEBSITE_URL=https://<your-website>` and `WEBSITE_REVALIDATE_SECRET=<secret>`, then run
+   `./deploy/deploy.sh`.
+
+After a change, `docker compose logs cms` shows `Revalidated website` with the refreshed pages, or
+`Could not revalidate` with the reason. Saving Site settings refreshes every page.
+
+The website reads the API from its own server, so it doesn't need to be in `CORS_ORIGINS`. With uploads in
+S3, set `PAYLOAD_MEDIA_URL` on the website to `S3_PUBLIC_URL` (or `https://<bucket>.s3.<region>.amazonaws.com`
+when that is empty) so it is allowed to load the images.
+
+## Pages and profiles
+
+Both collections have drafts: **Save Draft** keeps a document private, **Publish** makes it readable
+without logging in.
+
+- **Pages** (`GET /api/pages`): standalone pages such as About or Services for all your websites and apps
+  (see "Pages for several websites and apps"), with a title, description, hero image, rich text (including
+  code and YouTube blocks), a slug and SEO overrides.
+- **Profiles** (`GET /api/profiles`): name, headline, photo, bio, location, and tabs for links (GitHub,
+  LinkedIn, …), skills (category and level 1–5), work experience and education. The email address is only
+  returned to logged-in users.
+
+The personal website shows its pages (see "Personal website"); no website reads profiles yet.
+
+### Pages for several websites and apps
+
+Every page has a **Sites** field (in the sidebar) that says which websites and apps show it. A page can
+belong to several, e.g. one privacy policy for the business website and the iOS app. The sites are listed
+in `src/sites.ts`:
+
+| Site             | Value it sends |
+| ---------------- | -------------- |
+| Personal website | `personal`     |
+| Business website | `business`     |
+| iOS app          | `ios-app`      |
+
+Each website or app asks only for its own pages by adding its value to the request:
+
+```bash
+# All pages of the business website
+GET /api/pages?where[sites][in]=business
+
+# One page: the iOS app's "privacy-policy"
+GET /api/pages?where[sites][in]=ios-app&where[slug][equals]=privacy-policy
+```
+
+The slug is unique per site, so the personal and business websites can each have their own `about` page.
+It's filled in from the title when left empty. Using a slug that another page already has on the same site
+shows an error on the slug field.
+
+To add a site (e.g. a second app), add a line to `src/sites.ts` and deploy. Don't change the value of a site
+that is live, since its website or app sends it; the label can change freely.
+
+**Pages created before the Sites field existed** don't belong to any site yet, so no website or app gets them.
+Either open each one and choose its sites, or assign them all to one site at once from the app server:
+
+```bash
+cd ~/payloadcms/apps/cms
+docker run --rm mongo:8 mongosh "$(grep '^DATABASE_URL=' .env | cut -d= -f2-)" --quiet --eval '
+  db.pages.updateMany({ sites: { $exists: false } }, { $set: { sites: ["personal"] } });
+  db.getCollection("_pages_versions").updateMany(
+    { "version.sites": { $exists: false } },
+    { $set: { "version.sites": ["personal"] } },
+  )'
+```
+
+**Databases from before the Sites field** also still have the old index that allowed each slug only once across
+all sites, so a second site's page with the same slug fails to save ("The following field is invalid: slug"), and
+`deploy/import-vigor.sh` warns about an index in `pages`. Remove it once, then restart the CMS, which creates the
+right index:
+
+```bash
+cd ~/payloadcms/apps/cms
+docker run --rm mongo:8 mongosh "$(grep '^DATABASE_URL=' .env | cut -d= -f2-)" --quiet --eval '
+  db.pages.dropIndex("slug_1")'
+docker compose restart cms
+```
+
+## Vigor website
+
+Everything under **Vigor website** in the admin panel is the content of the Vigor Gems and Jewelry website
+([atorpos/VigorNewWebsite](https://github.com/atorpos/VigorNewWebsite)), in English, Spanish, French and
+Traditional Chinese. The code is in `src/vigor/`, the languages in `src/locales.ts`.
+
+| In the admin panel | On the website                                                                          |
+| ------------------ | --------------------------------------------------------------------------------------- |
+| Products           | `/products` and a page per product. Products with a badge are featured on the home page |
+| Service pages      | `/topics/<slug>`, shown as tiles on the home page                                       |
+| News               | `/news` and a page per article                                                          |
+| Events             | Upcoming events on the home page (separate from the private events under Business)      |
+| Site settings      | Company name, contact details, opening hours, social links, main menu, key figures      |
+| Home page          | The hero slides at the top of the home page                                             |
+| About page         | `/about`                                                                                |
+
+**Languages.** Switch language with the menu at the top right; each text field shows its language, e.g.
+"Name — English". Categories, gemstones, metals, badges, units, slugs, SKUs, links and images are the same in
+every language. Fields marked \* must be filled in English only: in the other languages they can stay empty,
+and the website then shows the English text, also after it's edited.
+
+**Publishing.** Products, service pages, news and events have drafts, and each language is published on its own:
+
+- **Publish in English** (or the language you're editing) publishes that language only. An item published only
+  in English doesn't appear on the Spanish, French or Chinese site.
+- For a new item, use the arrow next to it → **Publish all locales**. The item then appears in every language
+  straight away, in English until you translate it.
+- To translate, switch language, change the texts and press **Publish in Español** (or the other language).
+- **Save Draft** keeps changes private. The website keeps showing the published version.
+
+Site settings, Home page and About page have no drafts: **Save** puts the change live in the language you're
+editing. (With MongoDB, Payload gives every global with drafts an index with the same name, so all but one
+of them fail to build.)
+
+**Images** go to Media like any upload (to S3 when it's on). A product without a photo gets a drawn
+illustration on the website.
+
+**Catalog choices** (categories, gemstones, metals, units, badges, news categories) are in
+`src/vigor/options.ts`. The website translates them with the `glossary` in its `shared/i18n/*.json`: when
+you add one, add its translations there too, or it shows in English on the other languages' pages.
+
+### Connecting the website (once)
+
+1. **Deploy the website** with Payload support (VigorNewWebsite PR #5 or later) and without `PAYLOAD_URL`, so it
+   still shows its own content.
+2. **Deploy this CMS** (`./deploy/deploy.sh`).
+3. **Copy the website's content into the CMS**, on the app server:
+
+   ```bash
+   cd ~/payloadcms/apps/cms
+   ./deploy/import-vigor.sh https://www.example.com --dry-run   # preview, nothing is saved
+   ./deploy/import-vigor.sh https://www.example.com
+   ```
+
+   It reads every language from the website (`GET /api/content/<language>`), downloads the images into Media
+   and publishes everything in all languages. Items that already exist (same slug; events with the same title
+   and day) and pages that already have content are skipped, so running it again is safe and keeps your
+   edits. An image that can't be downloaded is reported and left empty; `--no-images` skips them all. If the
+   website runs on this server, its local address works too, e.g. `http://127.0.0.1:3002`.
+
+4. **Point the website at the CMS**, in the website's `server/.env`, then rebuild it
+   (`docker compose up -d --build`):
+
+   ```bash
+   PAYLOAD_URL=https://cms.example.com        # this CMS's SERVER_URL
+   REVALIDATE_SECRET=<openssl rand -hex 32>
+   ```
+
+   `GET https://www.example.com/api/health` then shows `"content":"payload"`.
+
+5. **Refresh the website on every change.** In this CMS's `.env`, then `./deploy/deploy.sh`:
+
+   ```bash
+   VIGOR_WEBSITE_URL=https://www.example.com
+   VIGOR_WEBSITE_REVALIDATE_SECRET=<the same secret as REVALIDATE_SECRET>
+   ```
+
+   After a change, `docker compose logs cms` shows `Revalidated Vigor website`, or `Could not revalidate` with
+   the reason. Without these settings, the website picks up changes within a minute.
+
+The website reads published content without logging in, e.g.
+`GET /api/vigor-products?locale=es&fallback-locale=en` and `GET /api/globals/vigor-settings?locale=es`, from
+its own server, so it doesn't need to be in `CORS_ORIGINS`. If the CMS can't be reached, the website keeps
+showing the last content it loaded.
+
+Locally, run `pnpm payload run scripts/import-vigor.ts <website-url> [--dry-run]` in this folder instead.
+
+## Clients and events
+
+Both appear under **Business** in the admin panel and are private: every request, including reading,
+needs a logged-in user, so `GET /api/clients` and `GET /api/events` return `403` to everyone else.
+
+- **Clients**: company, contact person, job title, email, phone, website, address, business type,
+  industry, notes, **importance** (1–5 stars), status (lead, active, inactive) and source. Each client also
+  lists the events it is linked to.
+- **Events**: name, type (exhibition, trade show, sales event, conference, meeting, other), description, start and end
+  date and time with the **time zone** of the event, venue, booth, address, city, country, organizer,
+  website, linked clients, notes, status (planned, confirmed, completed, cancelled) and attachments. The
+  list is sorted with the latest event first, and an end date before the start date is rejected.
+
+Attachments are stored in Media, whose files are publicly readable by URL. Don't attach confidential
+documents to events.
+
+### Importing events
+
+`deploy/import-events.sh` adds events from a JSON file, such as a yearly list of exhibitions:
+
+```json
+{
+  "exhibitions": [
+    {
+      "event_name": "JCK Las Vegas",
+      "exact_date": "June 4 - 7, 2027",
+      "duration_days": 4,
+      "location": "The Venetian Expo, Las Vegas, NV, USA",
+      "business_nature": "World's Largest Global Fine Jewelry Industry Trade Event"
+    }
+  ]
+}
+```
+
+1. **Copy the file to the app server** (from your computer):
+
+   ```bash
+   scp exhibitions.json <user>@<app-server-ip>:~/
+   ```
+
+2. **Preview** on the app server. Nothing is saved; every event is listed with its dates, city and time zone:
+
+   ```bash
+   cd ~/payloadcms/apps/cms
+   ./deploy/import-events.sh ~/exhibitions.json --dry-run
+   ```
+
+3. **Import:**
+
+   ```bash
+   ./deploy/import-events.sh ~/exhibitions.json
+   ```
+
+Run it right after `./deploy/deploy.sh`. It then takes seconds, because it reuses the deploy's build. If the
+code changed since the last deploy, it builds first (5–10 minutes).
+
+How the file becomes events:
+
+| JSON              | Event                                                                                                      |
+| ----------------- | ---------------------------------------------------------------------------------------------------------- |
+| `event_name`      | Name                                                                                                       |
+| `exact_date`      | Start and end date at midnight, in the time zone of the city, e.g. `October 30 - November 1, 2026`         |
+| `location`        | Venue, address (parts starting with a number), city and country; for the USA, the state sets the time zone |
+| `business_nature` | Description; also sets the type (conference, trade show or exhibition)                                     |
+| `duration_days`   | Only checked against the dates; a mismatch is noted                                                        |
+
+- Every event starts as **Planned**.
+- **Dates "to be confirmed"**, such as `April 2027 (exact dates TBC)`, start on the 1st of the month and keep
+  the original text in the notes. Remarks in brackets after a location, e.g.
+  `(confirm with organiser)`, go to the notes too. The preview marks these with `[see notes]`.
+- **Running a file again is safe:** an event with the same name starting within 60 days of an existing one is
+  skipped, so your own changes (status, clients, notes) stay. When an organiser announces the exact dates of a
+  "TBC" event, change them in the admin panel.
+- **Nothing is saved when an entry can't be read.** The script lists each problem, e.g. a date it doesn't
+  understand, or a country without a time zone (add it to `COUNTRY_TIMEZONES` in
+  `scripts/import-events.ts`). Fix the file and run it again.
+- `Hong Kong` and `Singapore` are both city and country. Without a city, e.g. `Australia (venue TBC)`, the
+  city is `TBC`.
+
+Locally, run `pnpm payload run scripts/import-events.ts <file.json> [--dry-run]` in this folder instead.
+
+## Two-factor authentication
+
+Every account must use an authenticator app (Google Authenticator, Microsoft Authenticator, 1Password,
+Authy, …) in addition to its password. No email or SMS service is involved.
+
+- **First login after deploying:** after the password, `/admin/2fa` shows a QR code. Scan it, enter the
+  6-digit code, and store the 10 backup codes shown once (e.g. in a password manager). Set this up right
+  after deploying: until an account has done so, anyone with its password could set it up instead.
+- **Every login:** after the password, enter the current code from the app, or a backup code (each works
+  once).
+- **New phone:** open `/admin/2fa` while logged in, enter a current code or a backup code, press **Reset
+  two-factor**, then scan the new QR code.
+- **5 wrong codes** lock the code check for 15 minutes. A code is accepted only once, and a verified login
+  asks again after 12 hours.
+
+How it works: `src/proxy.ts` checks every `/admin` and `/api` request that carries a login token. Unless
+the request also has the `payload-2fa` cookie for that login session (signed with `PAYLOAD_SECRET`), admin
+pages redirect to `/admin/2fa` and API requests get `403`. Requests without a login token, like the
+website reading published posts, are not affected. The authenticator secret is stored encrypted with
+`PAYLOAD_SECRET`, backup codes only as hashes, and neither can be read through the API. Changing
+`PAYLOAD_SECRET` therefore makes every account set up two-factor again (after the reset below).
+
+**Lost the phone and the backup codes?** Reset the account from the app server; it must set up two-factor
+again at the next login:
+
+```bash
+cd ~/payloadcms/apps/cms
+docker run --rm mongo:8 mongosh "$(grep '^DATABASE_URL=' .env | cut -d= -f2-)" --quiet --eval '
+  db.users.updateOne({ email: "you@example.com" }, {
+    $set: { twoFactorEnabled: false },
+    $unset: { twoFactorSecret: "", twoFactorPendingSecret: "", twoFactorBackupCodes: "",
+              twoFactorLastStep: "", twoFactorFailedAttempts: "", twoFactorLockUntil: "" },
+  })'
+```
+
+The codes depend on the server clock. EC2 keeps it in sync by default; if codes are always rejected,
+check `timedatectl` on the app server.
+
+## Email (SendGrid)
+
+Payload sends "forgot password" emails. Without an email service it only writes them to the log
+(`docker compose logs cms`). To send them through SendGrid:
+
+1. **Verify a sender** in SendGrid (_Settings → Sender Authentication_). Either verify a single address
+   (_Single Sender Verification_, done in a minute), or authenticate your domain by adding the DNS records
+   SendGrid shows, which keeps the emails out of spam folders.
+2. **Create an API key** (_Settings → API Keys → Create API Key_): choose _Restricted Access_, set
+   _Mail Send_ to _Full Access_, and copy the key; SendGrid shows it only once.
+3. **Add to `.env`** and run `./deploy/deploy.sh`:
+
+   ```bash
+   SENDGRID_API_KEY=SG.xxxxxxxx
+   EMAIL_FROM_ADDRESS=cms@example.com   # the sender verified in step 1
+   EMAIL_FROM_NAME=Payload CMS
+   ```
+
+4. **Test:** log out, choose **Forgot password?**, and enter your email. The link in the email opens
+   `SERVER_URL/admin/reset/…`, is valid for one hour and works once. After choosing a new password you still
+   need your two-factor code.
+
+Payload sends at most one reset email per account every 15 seconds, and answers the same way for unknown
+addresses, so the form doesn't reveal which accounts exist. If no email arrives, look for
+`SendGrid rejected the email` in `docker compose logs cms`: `401`/`403` means the key is wrong or lacks the
+Mail Send permission; a sender error means `EMAIL_FROM_ADDRESS` isn't verified. SendGrid's _Activity Feed_
+shows whether an email was delivered.
+
+## Troubleshooting
+
+| Symptom                                                                  | Cause / fix                                                                                                                                                                 |
+| ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Login succeeds but you're bounced back to login, or API calls return 403 | `SERVER_URL` doesn't exactly match the browser URL (http vs https, IP vs domain, port). Fix `.env` and redeploy.                                                            |
+| `/api/health` → `503` / logs say `cannot connect to MongoDB`             | Run `./deploy/check-db.sh`. Timeout → security group or `bindIp`. `Authentication failed` → user/password/`authSource`, or an un-encoded special character in the password. |
+| Build killed / `exit code: 137`                                          | Out of memory. Use an 8 GB instance or check that swap is on (`swapon --show`).                                                                                             |
+| Caddy can't get a certificate                                            | DNS doesn't point at the instance yet, or port 80/443 is closed. Check `docker compose logs caddy`.                                                                         |
+| Upload fails: `Could not load credentials` / `AccessDenied`              | S3 access. Check that the IAM role is attached with the policy above and that the metadata hop limit is 2, or set the key pair in `.env`.                                   |
+| Upload works but images are broken (403)                                 | The files aren't public. Add the bucket policy (and untick the bucket-policy public-access blocks), or check the CloudFront origin access settings.                         |
+| Personal website only shows a change after a minute                      | `docker compose logs cms` shows `Could not revalidate`: `401` means the two secrets differ; `ECONNREFUSED` or a timeout means `WEBSITE_URL` is wrong.                       |
+| Personal website still shows its Markdown version of a page              | The page (or Site settings) was never saved in the CMS. Open it in the admin panel and save it, or run the import.                                                          |
+| Vigor website only shows a change after a minute                         | The same, for `VIGOR_WEBSITE_URL` and `VIGOR_WEBSITE_REVALIDATE_SECRET` (the website's `REVALIDATE_SECRET`).                                                                |
+| A page can't use a slug that another site's page uses ("invalid: slug")  | The database still has the index from before the Sites field. Remove it as described in "Pages for several websites and apps".                                              |
+| A new Vigor product shows in English but not in the other languages      | It is published in English only. Open it and use the arrow next to **Publish in English** → **Publish all locales**.                                                        |
+
+## Local development
+
+```bash
+cd apps/cms
+cp .env.example .env               # DATABASE_URL=mongodb://127.0.0.1/payload, SERVER_URL=http://localhost:3000
+pnpm install                       # installs the published payload@canary matching this branch's version
+pnpm dev                           # http://localhost:3000/admin
+```
+
+To run against this branch's packages locally instead, build them from the repo root
+(`pnpm build:core`), run `node apps/cms/scripts/pack-local-packages.mjs`, then `pnpm install`
+in `apps/cms`. That rewrites `apps/cms/pnpm-workspace.yaml`, so don't commit that change.
+After changing collections or fields, run `pnpm generate:types` and `pnpm generate:importmap`.
+
+Test the production image locally:
+
+```bash
+docker compose build && docker compose up
+```
+
+## Keeping the branch up to date with upstream Payload
+
+Everything here lives in `apps/cms` and nothing outside it was modified, so merging upstream
+`main` into this branch won't conflict with it. After a merge that bumps the version, update
+the `4.0.0-canary.*` versions in `apps/cms/package.json` (only used for local `pnpm install`;
+the Docker build always uses the packages from the branch). Then redeploy.
