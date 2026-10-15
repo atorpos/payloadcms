@@ -172,6 +172,10 @@ export const VigorSettings: GlobalConfig = {
       label: 'Key figures',
     },
   ],
+  // Otherwise updateVigorSetting
+  graphQL: {
+    name: 'VigorSettings',
+  },
   hooks: {
     afterChange: [revalidateVigorGlobal],
   },

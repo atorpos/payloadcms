@@ -50,6 +50,11 @@ export const VigorNews: CollectionConfig = {
       required: true,
     },
   ],
+  // "News" would otherwise become createVigorNew
+  graphQL: {
+    pluralName: 'VigorNews',
+    singularName: 'VigorNewsArticle',
+  },
   hooks: {
     afterChange: [revalidateVigorAfterChange],
     afterDelete: [revalidateVigorAfterDelete],

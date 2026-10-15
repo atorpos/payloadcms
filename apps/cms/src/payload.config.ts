@@ -21,6 +21,7 @@ import { requestSizeLimit } from './requestSizeLimit'
 import { s3StorageAdapter } from './storage/s3'
 import { timezones } from './timezones'
 import { vigorCollections, vigorGlobals } from './vigor'
+import { vigorGraphQLMutations } from './vigor/graphql'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -88,6 +89,11 @@ export default buildConfig({
   email: sendgridAdapter(),
   endpoints: [healthEndpoint],
   globals: [...personalGlobals, ...vigorGlobals],
+  graphQL: {
+    mutations: vigorGraphQLMutations,
+    // For an app's GraphQL code generator: `pnpm generate:graphql-schema` (README: "GraphQL API for apps")
+    schemaOutputFile: path.resolve(dirname, '../schema.graphql'),
+  },
   // Only fields marked `localized: true` have a version per language; see src/locales.ts
   localization: {
     defaultLocale: 'en',

@@ -8,6 +8,7 @@
   "scripts": {
     "build": "cross-env NODE_OPTIONS=\"--no-deprecation --max-old-space-size=6144\" payload build",
     "dev": "cross-env NODE_OPTIONS=--no-deprecation next dev",
+    "generate:graphql-schema": "cross-env NODE_OPTIONS=--no-deprecation PAYLOAD_CONFIG_PATH=src/payload.config.ts payload-graphql generate:schema",
     "generate:importmap": "cross-env NODE_OPTIONS=--no-deprecation payload generate:importmap",
     "generate:types": "cross-env NODE_OPTIONS=--no-deprecation payload generate:types",
     "payload": "cross-env NODE_OPTIONS=--no-deprecation payload",
@@ -15,6 +16,7 @@
   },
   "dependencies": {
     "@payloadcms/db-mongodb": "4.0.0-canary.39",
+    "@payloadcms/graphql": "4.0.0-canary.39",
     "@payloadcms/next": "4.0.0-canary.39",
     "@payloadcms/richtext-lexical": "4.0.0-canary.39",
     "@payloadcms/storage-s3": "4.0.0-canary.39",

@@ -36,6 +36,8 @@ uses to test templates.
 | `scripts/import-events.ts`                 | Imports events from a JSON file (see "Importing events")                               |
 | `src/vigor/`, `src/locales.ts`             | Content of the Vigor website in four languages (see "Vigor website")                   |
 | `scripts/import-vigor.ts`                  | Copies the Vigor website's current content into the CMS (see "Vigor website")          |
+| `src/vigor/graphql.ts`                     | Publishes Vigor items in every language over GraphQL (see "GraphQL API for apps")      |
+| `examples/ios/VigorCMS.swift`              | Swift client for the GraphQL API, for an iOS app (see "GraphQL API for apps")          |
 | `src/timezones.ts`                         | Time zones offered for event dates                                                     |
 | `src/proxy.ts`, `src/twoFactor/`           | Two-factor authentication for every login (see "Two-factor authentication")            |
 | `src/email/sendgrid.ts`                    | Sends emails such as "forgot password" through SendGrid (see "Email (SendGrid)")       |
@@ -741,6 +743,81 @@ docker run --rm mongo:8 mongosh "$(grep '^DATABASE_URL=' .env | cut -d= -f2-)" -
 
 The codes depend on the server clock. EC2 keeps it in sync by default; if codes are always rejected,
 check `timedatectl` on the app server.
+
+## GraphQL API for apps
+
+Apps, such as an iOS app for adding products, use the GraphQL API at `POST <SERVER_URL>/api/graphql`, logged in
+as a CMS user. `examples/ios/VigorCMS.swift` is a Swift client without dependencies that does everything below;
+copy it into the Xcode project.
+
+**Logging in** works like the admin panel, including the two-factor code:
+
+1. `POST /api/users/login` with `{"email": "…", "password": "…"}` returns `token`, a JWT valid for 2 hours.
+2. `POST /api/users/2fa/verify` with `{"code": "123456"}` (from the authenticator app, or a backup code) and the
+   header `Authorization: JWT <token>`. The response sets the `payload-2fa` cookie.
+3. Every other request sends `Authorization: JWT <token>` and `Cookie: payload-2fa=…`. Without the cookie, the
+   API answers `403` "Two-factor authentication required.".
+
+Before the token expires, `POST /api/users/refresh-token` with the same two headers returns `refreshedToken`. The
+two-factor check stays valid for 12 hours; after that, the app logs in again. `POST /api/users/logout` ends the
+session. Use these REST endpoints rather than GraphQL's `loginUser` and `refreshTokenUser`: the two-factor check
+always lets them through, so an old session can't block a new login.
+
+The account must have set up two-factor in the admin panel first. Give each person their own account; every
+logged-in user can change all content. Apps don't need to be in `CORS_ORIGINS`.
+
+**Adding a product:**
+
+```graphql
+mutation Create($data: mutationVigorProductInput!) {
+  createVigorProduct(data: $data, draft: true, locale: en) {
+    id
+    slug
+  }
+}
+```
+
+```json
+{
+  "data": {
+    "name": "Emerald Solitaire Ring",
+    "slug": "",
+    "sku": "VG-R3001",
+    "category": "Rings",
+    "stone": "Emerald",
+    "metal": "_18Kyellowgold",
+    "weight": "1.50 ct emerald",
+    "moq": 2,
+    "unit": "piece",
+    "badge": "Bestseller",
+    "summary": "A single emerald on a slim band.",
+    "body": "First paragraph.\n\nSecond paragraph.",
+    "image": "<id of the uploaded photo>"
+  }
+}
+```
+
+- `"slug": ""` fills the slug in from the name.
+- Dropdown values use their GraphQL names, e.g. `Loosegemstones`, `Lab_growndiamond`, `_18Kyellowgold`,
+  `Loose_unset_` and `Bestseller`. The schema below lists them all.
+- **Photos:** GraphQL can't upload files. Upload with `POST /api/media` as `multipart/form-data`, with a `file` part
+  and a `_payload` part containing `{"alt": "…"}`, then use the returned `doc.id` as `image`. With S3 on, the photo
+  goes to S3.
+- **Translations:** `updateVigorProduct(id: "…", data: { name: "…", summary: "…" }, draft: true, locale: es)`.
+- **Publishing:** `publishVigorProduct(id: "…")` publishes the product in every language at once, like **Publish all
+  locales**; texts without a translation show in English. `createVigorProduct` and `updateVigorProduct` with
+  `_status: published` publish only the language given as `locale`. `publishVigorService`,
+  `publishVigorNewsArticle` and `publishVigorEvent` do the same for the other Vigor collections.
+- **Checking:** `VigorProducts(draft: true, where: { sku: { equals: "VG-R3001" } }) { docs { id name _status } }`
+  also lists drafts.
+
+**Schema for code generators** such as Apollo iOS: in production the API doesn't answer introspection queries, so
+generate the schema file instead, and again after changing collections or fields:
+
+```bash
+cd apps/cms
+pnpm generate:graphql-schema   # writes apps/cms/schema.graphql
+```
 
 ## Email (SendGrid)
 
