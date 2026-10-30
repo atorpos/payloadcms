@@ -4,7 +4,7 @@ slug: privacy-policy
 description: What Vigor Gems collects through the VgemsAI app and the Vigor Gems website, why, who it is shared with, how long it is kept, and how to see, change or delete it.
 ---
 
-_Last updated: October 28, 2026_
+_Last updated: October 30, 2026_
 
 This Privacy Policy explains how Vigor Gems ("Vigor", "we", "us") collects, uses and shares information when you use the VgemsAI app and its widgets, the Vigor Gems website, and your account, which works in both (together, "our services").
 
@@ -31,7 +31,7 @@ Our services are made for jewelry and gemstone businesses, such as retailers, de
 
 - **Device information (app):** a random identifier that the app creates the first time you use it (it isn't your device's hardware identifier and changes if you erase or replace your device), your device model, iOS version and app version. We use it to keep your account secure, for example to recognize sign-ins from a new device.
 - **Device key (app):** a random secret the app creates and keeps in your device's Keychain. We keep only a hash of it, which lets us recognize a device that has already signed in to your account.
-- **Push notification token (app):** the address Apple gives your device for notifications, only while notifications are turned on in the app's Settings. Turning them off there deletes it from our servers.
+- **Push notification token (app):** the address Google's Firebase Cloud Messaging gives your device for notifications (based on the one Apple gives it), only while notifications are turned on in the app's Settings. Turning them off there deletes it from our servers.
 - **Sign-in information:** when you sign in, from which of your devices, and the sign-in sessions that keep you signed in.
 - **Usage information about chats (app):** when each question was asked, which AI model answered, the length of the answer and how long it took.
 - **Server logs:** like most online services, our servers record the IP address, time and address of each request they receive. We use these logs for security, to limit abuse (for example, repeated failed sign-ins or contact form messages) and to fix problems.
@@ -80,7 +80,7 @@ We share personal information only with:
     - Amazon Web Services, which hosts our servers, databases and files;
     - Anthropic and OpenAI, which write the assistant's answers and the conversation summaries;
     - Twilio SendGrid, which sends our emails, such as sign-in codes, password reset codes and contact form messages;
-    - Google, for website analytics if you accept it, and for the fonts and maps the website loads;
+    - Google, for website analytics if you accept it, for the fonts and maps the website loads, and for Firebase Cloud Messaging, which passes our push notifications to Apple;
     - Apple, which delivers push notifications to your device, keeps your passkeys and provides maps.
 - **Our team**, such as sales and customer care, who need it to work with you.
 - **Authorities and others when the law requires it**, or when it's needed to protect our rights, our customers or the public, for example to prevent fraud.

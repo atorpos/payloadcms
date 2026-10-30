@@ -112,17 +112,17 @@ export type LexicalNodes_8909F562 =
   | SerializedListItemNode<LexicalNodes_8909F562>;
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "LexicalNodes_184C5A6E".
+ * via the `definition` "LexicalNodes_ECEDE4E2".
  */
-export type LexicalNodes_184C5A6E =
+export type LexicalNodes_ECEDE4E2 =
   | SerializedTextNode
   | SerializedTabNode
   | SerializedLineBreakNode
-  | SerializedParagraphNode<LexicalNodes_184C5A6E>
+  | SerializedParagraphNode<LexicalNodes_ECEDE4E2>
   | SerializedHorizontalRuleNode
   | SerializedUploadNode<'media'>
   | SerializedUploadNode<'personal-photos'>
-  | SerializedQuoteNode<LexicalNodes_184C5A6E>
+  | SerializedQuoteNode<LexicalNodes_ECEDE4E2>
   | SerializedRelationshipNode<
       | 'users'
       | 'posts'
@@ -136,6 +136,7 @@ export type LexicalNodes_184C5A6E =
       | 'chat-messages'
       | 'market-materials'
       | 'market-prices'
+      | 'push-notifications'
       | 'vigor-products'
       | 'vigor-services'
       | 'vigor-news'
@@ -145,11 +146,11 @@ export type LexicalNodes_184C5A6E =
       | 'payload-preferences'
       | 'payload-migrations'
     >
-  | SerializedAutoLinkNode<LexicalNodes_184C5A6E, LexicalLinkFields>
-  | SerializedLinkNode<LexicalNodes_184C5A6E, LexicalLinkFields>
-  | SerializedListNode<LexicalNodes_184C5A6E>
-  | SerializedListItemNode<LexicalNodes_184C5A6E>
-  | SerializedHeadingNode<LexicalNodes_184C5A6E>;
+  | SerializedAutoLinkNode<LexicalNodes_ECEDE4E2, LexicalLinkFields>
+  | SerializedLinkNode<LexicalNodes_ECEDE4E2, LexicalLinkFields>
+  | SerializedListNode<LexicalNodes_ECEDE4E2>
+  | SerializedListItemNode<LexicalNodes_ECEDE4E2>
+  | SerializedHeadingNode<LexicalNodes_ECEDE4E2>;
 /**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "LexicalNodes_3DE324E4".
@@ -183,6 +184,7 @@ export interface Config {
     'chat-messages': ChatMessage;
     'market-materials': MarketMaterial;
     'market-prices': MarketPrice;
+    'push-notifications': PushNotification;
     'vigor-products': VigorProduct;
     'vigor-services': VigorService;
     'vigor-news': VigorNewsArticle;
@@ -223,6 +225,7 @@ export interface Config {
     'chat-messages': ChatMessagesSelect<false> | ChatMessagesSelect<true>;
     'market-materials': MarketMaterialsSelect<false> | MarketMaterialsSelect<true>;
     'market-prices': MarketPricesSelect<false> | MarketPricesSelect<true>;
+    'push-notifications': PushNotificationsSelect<false> | PushNotificationsSelect<true>;
     'vigor-products': VigorProductsSelect<false> | VigorProductsSelect<true>;
     'vigor-services': VigorServicesSelect<false> | VigorServicesSelect<true>;
     'vigor-news': VigorNewsSelect<false> | VigorNewsSelect<true>;
@@ -792,7 +795,7 @@ export interface Profile {
    */
   headline?: string | null;
   photo?: (string | null) | Media;
-  bio?: LexicalRichText<LexicalNodes_184C5A6E> | null;
+  bio?: LexicalRichText<LexicalNodes_ECEDE4E2> | null;
   links?:
     | {
         platform: 'github' | 'linkedin' | 'youtube' | 'x' | 'website' | 'other';
@@ -1180,6 +1183,63 @@ export interface MarketPrice {
   createdAt: string;
 }
 /**
+ * Notifications on the phones of VgemsAI app users. Choose "Now" or a time under Send, and save: it goes out within a minute of that time.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "push-notifications".
+ */
+export interface PushNotification {
+  id: string;
+  /**
+   * In bold on the notification, e.g. "New trade show added"
+   */
+  title: string;
+  body: string;
+  /**
+   * The tab the app opens when the notification is tapped
+   */
+  screen: 'home' | 'events' | 'products' | 'research' | 'settings';
+  audience: 'everyone' | 'clients';
+  /**
+   * Only clients who signed up in the app (with a VgemsAI App Account) can get it, on the phones they are signed in on with notifications on.
+   */
+  clients?: (string | Client)[] | null;
+  delivery: 'draft' | 'now' | 'scheduled';
+  sendAt?: string | null;
+  sendAt_tz?: SupportedTimezones;
+  status: 'draft' | 'queued' | 'sending' | 'sent' | 'failed';
+  sentAt?: string | null;
+  results?: {
+    /**
+     * Phones it was sent to
+     */
+    devices?: number | null;
+    /**
+     * Accepted by Firebase
+     */
+    delivered?: number | null;
+    /**
+     * Not accepted, e.g. Firebase was busy
+     */
+    failed?: number | null;
+    /**
+     * Phones that no longer have the app or notifications: never sent to again
+     */
+    removed?: number | null;
+  };
+  problem?: string | null;
+  createdBy?: {
+    relationTo: 'users';
+    value: string | User;
+  } | null;
+  updatedBy?: {
+    relationTo: 'users';
+    value: string | User;
+  } | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "vigor-products".
  */
@@ -1406,6 +1466,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'market-prices';
         value: string | MarketPrice;
+      } | null)
+    | ({
+        relationTo: 'push-notifications';
+        value: string | PushNotification;
       } | null)
     | ({
         relationTo: 'vigor-products';
@@ -1997,6 +2061,35 @@ export interface MarketPricesSelect<T extends boolean = true> {
   date?: T;
   price?: T;
   source?: T;
+  createdBy?: T;
+  updatedBy?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "push-notifications_select".
+ */
+export interface PushNotificationsSelect<T extends boolean = true> {
+  title?: T;
+  body?: T;
+  screen?: T;
+  audience?: T;
+  clients?: T;
+  delivery?: T;
+  sendAt?: T;
+  sendAt_tz?: T;
+  status?: T;
+  sentAt?: T;
+  results?:
+    | T
+    | {
+        devices?: T;
+        delivered?: T;
+        failed?: T;
+        removed?: T;
+      };
+  problem?: T;
   createdBy?: T;
   updatedBy?: T;
   updatedAt?: T;
@@ -3567,6 +3660,7 @@ export interface CollectionQueryWidget {
       | 'chat-messages'
       | 'market-materials'
       | 'market-prices'
+      | 'push-notifications'
       | 'vigor-products'
       | 'vigor-services'
       | 'vigor-news'
@@ -3608,6 +3702,7 @@ export interface ActivityWidget {
           | 'chat-messages'
           | 'market-materials'
           | 'market-prices'
+          | 'push-notifications'
           | 'vigor-products'
           | 'vigor-services'
           | 'vigor-news'

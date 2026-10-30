@@ -12,6 +12,7 @@ import { Clients } from './collections/Clients'
 import { Events } from './collections/Events'
 import { MarketMaterials } from './collections/MarketMaterials'
 import { MarketPrices } from './collections/MarketPrices'
+import { PushNotifications } from './collections/PushNotifications'
 import { seedMarketMaterials } from './collections/marketSeed'
 import { Media, mediaVariants } from './collections/Media'
 import { Pages } from './collections/Pages'
@@ -36,6 +37,11 @@ import {
 } from './endpoints/appEventDiscovery'
 import { appEventsEndpoint } from './endpoints/appEvents'
 import { appMarketEndpoint, appMarketPricesEndpoint } from './endpoints/appMarket'
+import {
+  appPushNotificationResultEndpoint,
+  appPushNotificationsDueEndpoint,
+  appPushNotificationStartEndpoint,
+} from './endpoints/appPushNotifications'
 import { healthEndpoint } from './endpoints/health'
 import { locales } from './locales'
 import { personalCollections, personalGlobals } from './personal'
@@ -99,6 +105,7 @@ export default buildConfig({
     ChatMessages,
     MarketMaterials,
     MarketPrices,
+    PushNotifications,
     ...vigorCollections,
   ],
   cors: allowedOrigins,
@@ -126,6 +133,9 @@ export default buildConfig({
     appEventDiscoverySaveEndpoint,
     appMarketEndpoint,
     appMarketPricesEndpoint,
+    appPushNotificationsDueEndpoint,
+    appPushNotificationStartEndpoint,
+    appPushNotificationResultEndpoint,
     healthEndpoint,
   ],
   globals: [...personalGlobals, ...vigorGlobals],
