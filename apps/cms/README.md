@@ -38,6 +38,7 @@ uses to test templates.
 | `scripts/locate-events.ts`                 | Looks up the coordinates of events saved earlier (see "Event locations")               |
 | `src/endpoints/appEvents.ts`               | Upcoming events for the VgemsAI app (see "The VgemsAI app")                            |
 | `src/endpoints/appEventDiscovery.ts`       | Trade shows Claude finds every week (see "Events found by Claude")                     |
+| `src/collections/PushNotifications.ts`, `src/endpoints/appPushNotifications.ts` | Push notifications to the VgemsAI app (see "Push notifications") |
 | `src/endpoints/appClients.ts`              | VgemsAI app signups as clients, and their Account screen (see "The VgemsAI app")       |
 | `src/endpoints/appChat.ts`                 | Saves VgemsAI app chats, deletes app accounts' data (see "The VgemsAI app")            |
 | `src/collections/ChatSessions.ts`, `…/ChatMessages.ts` | VgemsAI app conversations, deleted after 90 days (see "Chats")             |
@@ -853,7 +854,8 @@ Locally, run `pnpm payload run scripts/locate-events.ts [--dry-run] [--all]` in 
 ### The VgemsAI app
 
 The VgemsAI app talks to the CMS through its own backend, awoz-api, which reads upcoming events from
-`GET /api/app/events`, adds the trade shows Claude finds every week (see "Events found by Claude"), saves every signup as a client with `POST /api/app/clients`, keeps the app's chats
+`GET /api/app/events`, adds the trade shows Claude finds every week (see "Events found by Claude"), sends the push
+notifications written here (see "Push notifications"), saves every signup as a client with `POST /api/app/clients`, keeps the app's chats
 (see "Chats" below) and the Research tab's market prices (see "Market prices"). A server can't pass two-factor,
 so instead of logging in it sends a shared key:
 
@@ -973,6 +975,28 @@ with their accounts:
 | --- | --- |
 | `GET /api/app/market` | The active materials with their latest two prices, their price at the end of each month for 10 years, and at the end of each week for the last year |
 | `POST /api/app/market-prices` | Saves up to 1000 prices, one per material and day, e.g. `{"source": "api-ninjas", "prices": [{"material": "gold", "date": "2026-10-28", "price": 2680.5}]}`; answers how many were created, updated, unchanged and kept |
+
+#### Push notifications
+
+**VgemsAI App → Push Notifications** sends notifications to the phones of app users. Write a title and a message,
+choose the tab the app opens when it's tapped (**Opens**) and who gets it (**To**: everyone with the app, or chosen
+clients; only clients with a **VgemsAI App Account** can be chosen). Under **Send**, choose **Now** or **At a set
+time** (with its time zone) and save; **Not yet (draft)** keeps it for later.
+
+awoz-api checks every minute for the ones whose time has come and sends them through Firebase to the phones that
+are signed in with notifications on (awoz-api README: "Push notifications", which also has the Firebase setup). The
+sidebar then shows its **Status** and how many phones it was sent to, how many Firebase accepted, and how many no
+longer have the app (those are never sent to again).
+
+- A notification goes out once: when it's sending or sent it can't be changed. **Duplicate** it to send it again;
+  the copy starts as a draft.
+- Deleting one that hasn't gone out yet cancels it.
+- **Failed** comes with the reason, e.g. Firebase isn't set up on awoz-api. Fix it, then save the notification again
+  with **Send: Now**.
+
+awoz-api uses three endpoints (`src/endpoints/appPushNotifications.ts`): `GET /api/app/push-notifications/due` lists
+the notifications due, with the app accounts of the chosen clients; `POST /api/app/push-notifications/:id/start`
+marks one as sending (`409` if it no longer waits); `POST /api/app/push-notifications/:id/result` saves how it went.
 
 #### Privacy policy and terms of use
 
