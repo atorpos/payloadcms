@@ -581,11 +581,12 @@ and the website then shows the English text, also after it's edited.
 
 **Publishing.** Products, service pages, news and events have drafts, and each language is published on its own:
 
-- **Publish in English** (or the language you're editing) publishes that language only. An item published only
-  in English doesn't appear on the Spanish, French or Chinese site.
-- For a new item, use the arrow next to it → **Publish all locales**. The item then appears in every language
-  straight away, in English until you translate it.
-- To translate, switch language, change the texts and press **Publish in Español** (or the other language).
+- **Publish in English** (or the language you're editing) publishes that language only. The website and the
+  VgemsAI app show every item published in English in every language: in English until its translation is
+  published in that language.
+- To translate everything still in English at once, use Claude (see "Translating the Vigor website with
+  Claude"). To translate by hand, switch language, change the texts and press **Publish in Español** (or the
+  other language).
 - **Save Draft** keeps changes private. The website keeps showing the published version.
 
 Site settings, Home page and About page have no drafts: **Save** puts the change live in the language you're
@@ -752,12 +753,56 @@ ones to keep. Drafts aren't on the website, so nothing changes there until you p
    `--hint=likely,check` narrows it to those hints. A product with a required field still empty
    (gemstones, metal, category…) stays a draft and is listed with the field to fill in; run it again
    after filling them in. It also completes products published in English only. Don't use **Publish**
-   in the list for this: it publishes only the language you're viewing, so the products are missing
-   from the Spanish, French and Chinese pages, and it skips incomplete products with only a brief error.
+   in the list for this: it publishes only the language you're viewing, and it skips incomplete products
+   with only a brief error.
    Locally without Docker: `pnpm payload run scripts/publish-legacy-products.ts --with-photo --dry-run`.
 
 The stones' names aren't translated yet: on the Spanish, French and Chinese pages they show in English
 until they're added to the `glossary` in the website's `shared/i18n/*.json`.
+
+### Translating the Vigor website with Claude
+
+`deploy/translate-vigor.sh` translates everything under **Vigor website** that is still in English into
+Spanish, French and Traditional Chinese with Claude: products (name, weight and details, summary, body),
+service pages, news, events, Site settings, Home page, About page and VgemsAI app page. Products imported
+from the old website are English only, so this is how they get their translations.
+
+1. Add an API key from the Claude Console (API keys) to `.env`: `ANTHROPIC_API_KEY=…`. Optional:
+   `TRANSLATE_MODEL` (default `claude-opus-5-5`; `claude-sonnet-5-5` costs about half as much) and
+   `TRANSLATE_EFFORT` (`low` by default).
+2. See what it would do, try it on a few products, check them in the admin panel (switch language at the
+   top right), then translate the rest:
+
+   ```bash
+   ./deploy/translate-vigor.sh --dry-run                    # what would be translated; nothing is sent or saved
+   ./deploy/translate-vigor.sh --only=products --limit=5    # five products
+   ./deploy/translate-vigor.sh                              # everything still in English
+   ```
+
+   `--only=products,news` takes only those (`products`, `topics`, `news`, `events`, `settings`, `home`,
+   `about`, `app`), `--locale=fr` only those languages, `--limit=N` only the first N items. Locally without
+   Docker: `pnpm payload run scripts/translate-vigor.ts --dry-run`.
+
+- **Only what's missing.** A text is translated only where that language has no text of its own, so
+  translations edited here are kept, and running it again picks up new and changed items' empty texts.
+  `--retranslate` translates again the texts that already have a translation, replacing edits made by hand:
+  narrow it with `--only` and `--locale`.
+- **Publishing.** When an item's English is published with no unpublished changes, its translations are
+  published in their language straight away, and so is any language of it that was still unpublished. When the
+  English is a draft or has unpublished changes, the translations are saved as drafts: publish the English, then
+  run it again to publish them. Site settings, Home page, About page and VgemsAI app page are saved directly.
+- **What Claude is told.** Each item goes in one request with its English texts and, for products, its
+  category, gemstones and metal, so the terms come out right. SKUs, codes, measurements, sizes and names are
+  kept as they are, paragraphs stay paragraphs, and Traditional Chinese uses Hong Kong and Taiwan characters.
+  The instructions are in `SYSTEM` in `scripts/translate-vigor.ts`.
+- **Cost.** A product is a few US cents with the default model. Each run ends with the number of requests and
+  tokens used.
+- **If an item fails** (Claude declines, leaves a text out, or can't be reached), nothing of it is saved and it
+  is listed at the end: run it again to retry. A wrong API key stops the run straight away.
+
+The website refreshes once at the end when `VIGOR_WEBSITE_URL` and `VIGOR_WEBSITE_REVALIDATE_SECRET` are set,
+otherwise within a minute. Catalog choices (categories, gemstones, metals…) aren't texts here: the website
+translates them with its glossary, as above.
 
 ## Clients and events
 
@@ -1063,8 +1108,8 @@ with their accounts:
 The app's **Products** tab shows the Vigor website's catalog (**Vigor website → Products**), through awoz-api,
 which searches, filters and sorts it for the app. `GET /api/app/products?locale=en`
 (`src/endpoints/appProducts.ts`) gives awoz-api every product the website shows (published and not hidden), in
-their sort order, with their photo's URLs. In another language (`es`, `fr`, `zh-Hant`) it gives the products
-published in that language, as the website does.
+their sort order, with their photo's URLs. In another language (`es`, `fr`, `zh-Hant`) it gives the same
+products, as the website does: each in that language where its translation is published, otherwise in English.
 
 **Prices:** each product has an optional **Price (USD)**, per unit (piece, pair, parcel or strand). Only
 people signed in to the app see it; awoz-api leaves it out for everyone else, and the website and the public API
