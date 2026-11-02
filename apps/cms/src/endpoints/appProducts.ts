@@ -11,8 +11,10 @@ const DEFAULT_LOCALE = 'en'
 /**
  * `GET /api/app/products?locale=en` - the Vigor website's catalog for the VgemsAI app's backend
  * (awoz-api), which searches, filters and sorts it for the app: every product the website shows
- * (published and not hidden), in the catalog's order (Sort order), in the language asked for
- * (`en`, `es`, `fr` or `zh-Hant`; English where a text isn't translated).
+ * (published in English and not hidden), in the catalog's order (Sort order), in the language
+ * asked for (`en`, `es`, `fr` or `zh-Hant`). Like on the website, a product shows in English until
+ * its translation is published in that language (each language has its own status), and English
+ * fills in any text that isn't translated.
  *
  * Unlike the website, it includes each product's price: awoz-api passes it on to signed-in app users
  * only. Server to server only, with `X-API-Key: <APP_API_KEY>` (see ./appApiKey.ts); while
@@ -44,26 +46,36 @@ export const appProductsEndpoint: Endpoint = {
       )
     }
 
-    const { docs } = await req.payload.find({
-      collection: 'vigor-products',
-      // The photo, with its URLs
-      depth: 1,
-      fallbackLocale: DEFAULT_LOCALE,
-      locale: asked as NonNullable<Parameters<typeof req.payload.find>[0]['locale']>,
-      // The price is for editors only (field access); this endpoint's API key check stands in
-      overrideAccess: true,
-      pagination: false,
-      sort: 'sortOrder',
-      // As the website sees them
-      where: {
-        and: [{ _status: { equals: 'published' } }, { hidden: { not_equals: true } }],
-      },
-    })
+    const published = (locale: string) =>
+      req.payload.find({
+        collection: 'vigor-products',
+        // The photo, with its URLs
+        depth: 1,
+        fallbackLocale: DEFAULT_LOCALE,
+        locale: locale as NonNullable<Parameters<typeof req.payload.find>[0]['locale']>,
+        // The price is for editors only (field access); this endpoint's API key check stands in
+        overrideAccess: true,
+        pagination: false,
+        sort: 'sortOrder',
+        // As the website sees them
+        where: {
+          and: [{ _status: { equals: 'published' } }, { hidden: { not_equals: true } }],
+        },
+      })
+
+    // The English list decides which products there are; each one in the language asked for where
+    // it's published in it
+    const [english, translated] = await Promise.all([
+      published(DEFAULT_LOCALE),
+      asked === DEFAULT_LOCALE ? undefined : published(asked),
+    ])
+    const byId = new Map((translated?.docs ?? []).map((product) => [String(product.id), product]))
+    const products = english.docs.map((product) => byId.get(String(product.id)) ?? product)
 
     return Response.json({
       currency: CURRENCY,
       locale: asked,
-      products: docs.map((product) => toAppProduct(req, product)),
+      products: products.map((product) => toAppProduct(req, product)),
     })
   },
   method: 'get',
