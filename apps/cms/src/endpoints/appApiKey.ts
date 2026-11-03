@@ -10,9 +10,17 @@ import crypto from 'node:crypto'
  * Returns the response to send when the request may not continue: 404 while APP_API_KEY is empty, as if the
  * endpoint didn't exist, and 401 for a missing or wrong key. Returns null when the key is right.
  */
-export const refuseWithoutAppApiKey = (req: PayloadRequest): null | Response => {
-  const apiKey = process.env.APP_API_KEY
+export const refuseWithoutAppApiKey = (req: PayloadRequest): null | Response =>
+  refuseWithoutApiKey(req, process.env.APP_API_KEY)
 
+/**
+ * The same check with another app's key, e.g. HOCKEY_API_KEY for the HockeyPoolCap API: each backend has its
+ * own key, so one leaking doesn't open the other app's endpoints.
+ */
+export const refuseWithoutApiKey = (
+  req: PayloadRequest,
+  apiKey: string | undefined,
+): null | Response => {
   if (!apiKey) {
     return Response.json({ errors: [{ message: 'Not Found' }] }, { status: 404 })
   }
