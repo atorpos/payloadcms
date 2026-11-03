@@ -112,17 +112,17 @@ export type LexicalNodes_8909F562 =
   | SerializedListItemNode<LexicalNodes_8909F562>;
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "LexicalNodes_ECEDE4E2".
+ * via the `definition` "LexicalNodes_D76C6D9C".
  */
-export type LexicalNodes_ECEDE4E2 =
+export type LexicalNodes_D76C6D9C =
   | SerializedTextNode
   | SerializedTabNode
   | SerializedLineBreakNode
-  | SerializedParagraphNode<LexicalNodes_ECEDE4E2>
+  | SerializedParagraphNode<LexicalNodes_D76C6D9C>
   | SerializedHorizontalRuleNode
   | SerializedUploadNode<'media'>
   | SerializedUploadNode<'personal-photos'>
-  | SerializedQuoteNode<LexicalNodes_ECEDE4E2>
+  | SerializedQuoteNode<LexicalNodes_D76C6D9C>
   | SerializedRelationshipNode<
       | 'users'
       | 'posts'
@@ -137,6 +137,7 @@ export type LexicalNodes_ECEDE4E2 =
       | 'market-materials'
       | 'market-prices'
       | 'push-notifications'
+      | 'hockey-members'
       | 'vigor-products'
       | 'vigor-services'
       | 'vigor-news'
@@ -146,11 +147,11 @@ export type LexicalNodes_ECEDE4E2 =
       | 'payload-preferences'
       | 'payload-migrations'
     >
-  | SerializedAutoLinkNode<LexicalNodes_ECEDE4E2, LexicalLinkFields>
-  | SerializedLinkNode<LexicalNodes_ECEDE4E2, LexicalLinkFields>
-  | SerializedListNode<LexicalNodes_ECEDE4E2>
-  | SerializedListItemNode<LexicalNodes_ECEDE4E2>
-  | SerializedHeadingNode<LexicalNodes_ECEDE4E2>;
+  | SerializedAutoLinkNode<LexicalNodes_D76C6D9C, LexicalLinkFields>
+  | SerializedLinkNode<LexicalNodes_D76C6D9C, LexicalLinkFields>
+  | SerializedListNode<LexicalNodes_D76C6D9C>
+  | SerializedListItemNode<LexicalNodes_D76C6D9C>
+  | SerializedHeadingNode<LexicalNodes_D76C6D9C>;
 /**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "LexicalNodes_3DE324E4".
@@ -185,6 +186,7 @@ export interface Config {
     'market-materials': MarketMaterial;
     'market-prices': MarketPrice;
     'push-notifications': PushNotification;
+    'hockey-members': HockeyMember;
     'vigor-products': VigorProduct;
     'vigor-services': VigorService;
     'vigor-news': VigorNewsArticle;
@@ -226,6 +228,7 @@ export interface Config {
     'market-materials': MarketMaterialsSelect<false> | MarketMaterialsSelect<true>;
     'market-prices': MarketPricesSelect<false> | MarketPricesSelect<true>;
     'push-notifications': PushNotificationsSelect<false> | PushNotificationsSelect<true>;
+    'hockey-members': HockeyMembersSelect<false> | HockeyMembersSelect<true>;
     'vigor-products': VigorProductsSelect<false> | VigorProductsSelect<true>;
     'vigor-services': VigorServicesSelect<false> | VigorServicesSelect<true>;
     'vigor-news': VigorNewsSelect<false> | VigorNewsSelect<true>;
@@ -795,7 +798,7 @@ export interface Profile {
    */
   headline?: string | null;
   photo?: (string | null) | Media;
-  bio?: LexicalRichText<LexicalNodes_ECEDE4E2> | null;
+  bio?: LexicalRichText<LexicalNodes_D76C6D9C> | null;
   links?:
     | {
         platform: 'github' | 'linkedin' | 'youtube' | 'x' | 'website' | 'other';
@@ -1240,6 +1243,58 @@ export interface PushNotification {
   createdAt: string;
 }
 /**
+ * Everyone with an account in the HockeyPoolCap app. What you change here shows on their profile in the app.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "hockey-members".
+ */
+export interface HockeyMember {
+  id: string;
+  /**
+   * From their app account; they change it in the app
+   */
+  name: string;
+  /**
+   * Their login; it never changes
+   */
+  email?: string | null;
+  /**
+   * Nickname shown to other pool members
+   */
+  displayName?: string | null;
+  /**
+   * NHL team abbreviation, e.g. TOR
+   */
+  favoriteTeam?: string | null;
+  /**
+   * With country code, e.g. +1 416 555 0123
+   */
+  phone?: string | null;
+  location?: {
+    city?: string | null;
+    state?: string | null;
+    country?: string | null;
+  };
+  /**
+   * For the team only: never sent to the app
+   */
+  notes?: string | null;
+  /**
+   * The ID of their account in the HockeyPoolCap API. Set by the app.
+   */
+  appUserId: number;
+  createdBy?: {
+    relationTo: 'users';
+    value: string | User;
+  } | null;
+  updatedBy?: {
+    relationTo: 'users';
+    value: string | User;
+  } | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "vigor-products".
  */
@@ -1607,6 +1662,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'push-notifications';
         value: string | PushNotification;
+      } | null)
+    | ({
+        relationTo: 'hockey-members';
+        value: string | HockeyMember;
       } | null)
     | ({
         relationTo: 'vigor-products';
@@ -2227,6 +2286,30 @@ export interface PushNotificationsSelect<T extends boolean = true> {
         removed?: T;
       };
   problem?: T;
+  createdBy?: T;
+  updatedBy?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "hockey-members_select".
+ */
+export interface HockeyMembersSelect<T extends boolean = true> {
+  name?: T;
+  email?: T;
+  displayName?: T;
+  favoriteTeam?: T;
+  phone?: T;
+  location?:
+    | T
+    | {
+        city?: T;
+        state?: T;
+        country?: T;
+      };
+  notes?: T;
+  appUserId?: T;
   createdBy?: T;
   updatedBy?: T;
   updatedAt?: T;
@@ -3806,6 +3889,7 @@ export interface CollectionQueryWidget {
       | 'market-materials'
       | 'market-prices'
       | 'push-notifications'
+      | 'hockey-members'
       | 'vigor-products'
       | 'vigor-services'
       | 'vigor-news'
@@ -3848,6 +3932,7 @@ export interface ActivityWidget {
           | 'market-materials'
           | 'market-prices'
           | 'push-notifications'
+          | 'hockey-members'
           | 'vigor-products'
           | 'vigor-services'
           | 'vigor-news'

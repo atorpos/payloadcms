@@ -10,6 +10,7 @@ import { ensureChatRetentionIndexes } from './collections/chatRetention'
 import { ChatSessions } from './collections/ChatSessions'
 import { Clients } from './collections/Clients'
 import { Events } from './collections/Events'
+import { HockeyMembers } from './collections/HockeyMembers'
 import { MarketMaterials } from './collections/MarketMaterials'
 import { MarketPrices } from './collections/MarketPrices'
 import { PushNotifications } from './collections/PushNotifications'
@@ -44,6 +45,11 @@ import {
   appPushNotificationStartEndpoint,
 } from './endpoints/appPushNotifications'
 import { healthEndpoint } from './endpoints/health'
+import {
+  hockeyMemberDeleteEndpoint,
+  hockeyMemberEndpoint,
+  hockeyMemberSaveEndpoint,
+} from './endpoints/hockeyMembers'
 import { locales } from './locales'
 import { migrations } from './migrations'
 import { personalCollections, personalGlobals } from './personal'
@@ -108,6 +114,7 @@ export default buildConfig({
     MarketMaterials,
     MarketPrices,
     PushNotifications,
+    HockeyMembers,
     ...vigorCollections,
   ],
   cors: allowedOrigins,
@@ -143,6 +150,9 @@ export default buildConfig({
     appPushNotificationStartEndpoint,
     appPushNotificationResultEndpoint,
     healthEndpoint,
+    hockeyMemberDeleteEndpoint,
+    hockeyMemberEndpoint,
+    hockeyMemberSaveEndpoint,
   ],
   globals: [...personalGlobals, ...vigorGlobals],
   // Only fields marked `localized: true` have a version per language; see src/locales.ts

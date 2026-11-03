@@ -43,6 +43,7 @@ uses to test templates.
 | `src/endpoints/appClients.ts`              | VgemsAI app signups as clients, and their Account screen (see "The VgemsAI app")       |
 | `src/endpoints/appChat.ts`                 | Saves VgemsAI app chats, deletes app accounts' data (see "The VgemsAI app")            |
 | `src/collections/ChatSessions.ts`, `…/ChatMessages.ts` | VgemsAI app conversations, deleted after 90 days (see "Chats")             |
+| `src/collections/HockeyMembers.ts`, `src/endpoints/hockeyMembers.ts` | Profiles of the HockeyPoolCap app's accounts (see "The HockeyPoolCap app") |
 | `src/app/(frontend)/ios-app/`, `scripts/import-legal-pages.ts` | Privacy Policy and Terms of Use of the app and the Vigor website (see "Privacy policy and terms of use") |
 | `src/vigor/`, `src/locales.ts`             | Content of the Vigor website in four languages (see "Vigor website")                   |
 | `scripts/import-vigor.ts`                  | Copies the Vigor website's current content into the CMS (see "Vigor website")          |
@@ -1186,6 +1187,56 @@ app or the website starts collecting something new or uses a new service (anothe
 payments), update the Privacy Policy, and for the app the answers in App Store Connect → App Privacy, before releasing
 that version. Tell users in the app, on the website or by email before significant changes take effect, as both
 texts promise.
+
+## The HockeyPoolCap app
+
+The HockeyPoolCap app (iOS and Android, no website) has its own backend, the HockeyPoolCap API (atorpos/HockeyPoolCap-API,
+Spring Boot), and uses this CMS for its content the way the VgemsAI app does. It starts with each person's profile:
+
+```
+ iPhone / Android ── email + password, Bearer token ──► HockeyPoolCap API ── X-API-Key: HOCKEY_API_KEY ──► this CMS
+  profile screen                                          (login, NHL data)    /api/hockey/members/:appUserId
+```
+
+People log in with the API, which keeps their email and password. Their profile lives here under
+**HockeyPoolCap App → Members**, one per account: name and email (copies from the app, read-only here), **display
+name** (shown to other pool members), **favorite team** (an NHL abbreviation such as `TOR`), phone, and city,
+state/province and country, plus **notes** that only the team sees. The **HockeyPoolCap Account** in the sidebar is the
+account's ID in the API.
+
+- The API adds a member after each signup, within 30 seconds, and saves every change people make on the app's profile
+  screen. Members can't be created here.
+- **The app reads the profile from here each time the profile screen opens**, so what you change here (e.g. an
+  inappropriate display name) shows in the app right away. Notes are never sent to the app.
+- Deleting an account in the app deletes its member here. Deleting a member here doesn't delete the account: the app
+  then shows an empty profile, and the member comes back the next time the person saves their profile or name.
+
+**Connecting the API (once):** generate a key with `openssl rand -hex 32`, set it as `HOCKEY_API_KEY` in this
+server's `.env` and as `PAYLOAD_API_KEY` on the HockeyPoolCap API (with this CMS's address as `PAYLOAD_URL`), and
+redeploy both. It's a different key from `APP_API_KEY`, so each backend only opens its own endpoints. While
+`HOCKEY_API_KEY` is empty every `/api/hockey/...` endpoint answers `404`, and the API keeps profiles until it's set.
+
+The API uses three endpoints (`src/endpoints/hockeyMembers.ts`):
+
+| Endpoint | What it does |
+| --- | --- |
+| `PUT /api/hockey/members/:appUserId` | Adds or updates a member: `{name, email, profile}`. Without `profile` (or `null`), the profile stays as it is; with it, every profile field is set, so one left out is cleared. `201` when added, `200` when it existed |
+| `GET /api/hockey/members/:appUserId` | The member, without the notes; `404` when there's none |
+| `DELETE /api/hockey/members/:appUserId` | Deletes the member; `204` whether or not there was one |
+
+```bash
+curl -X PUT -H "X-API-Key: $HOCKEY_API_KEY" -H 'Content-Type: application/json' \
+  -d '{"name": "Oskar Wong", "email": "oskar@example.com", "profile": {"displayName": "Oz",
+       "favoriteTeam": "TOR", "phone": "+1 416 555 0123",
+       "location": {"city": "Toronto", "state": "Ontario", "country": "Canada"}}}' \
+  https://cms.example.com/api/hockey/members/1
+# {"appUserId": 1, "displayName": "Oz", "email": "oskar@example.com", "favoriteTeam": "TOR", "id": "…",
+#  "location": {"city": "Toronto", "country": "Canada", "state": "Ontario"}, "name": "Oskar Wong",
+#  "phone": "+1 416 555 0123", "updatedAt": "…"}
+```
+
+Invalid values, such as a display name over 40 characters or a team that isn't an abbreviation, get `400` with
+`{"errors": [{"message": "…", "path": "favoriteTeam"}]}`.
 
 ## Two-factor authentication
 
