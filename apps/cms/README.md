@@ -44,6 +44,7 @@ uses to test templates.
 | `src/endpoints/appChat.ts`                 | Saves VgemsAI app chats, deletes app accounts' data (see "The VgemsAI app")            |
 | `src/collections/ChatSessions.ts`, `…/ChatMessages.ts` | VgemsAI app conversations, deleted after 90 days (see "Chats")             |
 | `src/collections/HockeyMembers.ts`, `src/endpoints/hockeyMembers.ts` | Profiles of the HockeyPoolCap app's accounts (see "The HockeyPoolCap app") |
+| `src/collections/HockeyFantasyTeams.ts`, `src/endpoints/hockeyFantasyTeams.ts` | The fantasy teams those accounts follow in the app |
 | `src/app/(frontend)/ios-app/`, `scripts/import-legal-pages.ts` | Privacy Policy and Terms of Use of the app and the Vigor website (see "Privacy policy and terms of use") |
 | `src/vigor/`, `src/locales.ts`             | Content of the Vigor website in four languages (see "Vigor website")                   |
 | `scripts/import-vigor.ts`                  | Copies the Vigor website's current content into the CMS (see "Vigor website")          |
@@ -1191,11 +1192,13 @@ texts promise.
 ## The HockeyPoolCap app
 
 The HockeyPoolCap app (iOS and Android, no website) has its own backend, the HockeyPoolCap API (atorpos/HockeyPoolCap-API,
-Spring Boot), and uses this CMS for its content the way the VgemsAI app does. It starts with each person's profile:
+Spring Boot), and uses this CMS for its content the way the VgemsAI app does: each person's profile, and the fantasy
+teams they save to their account:
 
 ```
  iPhone / Android ── email + password, Bearer token ──► HockeyPoolCap API ── X-API-Key: HOCKEY_API_KEY ──► this CMS
-  profile screen                                          (login, NHL data)    /api/hockey/members/:appUserId
+  profile, fantasy teams                                  (login, NHL data,    /api/hockey/members/:appUserId
+                                                           points)              /api/hockey/members/:appUserId/fantasy-teams
 ```
 
 People log in with the API, which keeps their email and password. Their profile lives here under
@@ -1210,19 +1213,29 @@ account's ID in the API.
   inappropriate display name) shows in the app right away. Notes are never sent to the app.
 - Deleting an account in the app deletes its member here. Deleting a member here doesn't delete the account: the app
   then shows an empty profile, and the member comes back the next time the person saves their profile or name.
+- **Fantasy teams** (HockeyPoolCap App → Fantasy Teams, and on each member): the NHL players someone picked for a team
+  in their fantasy league, with the team's name and league. Each player is kept by his ID in the API, with his name,
+  position and team as they were when picked; the API adds everyone's points from its stats, so none are kept here.
+  The API adds the member the first time someone saves a team. Deleting a member, here or by deleting the account,
+  deletes their fantasy teams. People who use the app without an account keep their teams on the phone, never here.
 
 **Connecting the API (once):** generate a key with `openssl rand -hex 32`, set it as `HOCKEY_API_KEY` in this
 server's `.env` and as `PAYLOAD_API_KEY` on the HockeyPoolCap API (with this CMS's address as `PAYLOAD_URL`), and
 redeploy both. It's a different key from `APP_API_KEY`, so each backend only opens its own endpoints. While
 `HOCKEY_API_KEY` is empty every `/api/hockey/...` endpoint answers `404`, and the API keeps profiles until it's set.
 
-The API uses three endpoints (`src/endpoints/hockeyMembers.ts`):
+The API uses these endpoints (`src/endpoints/hockeyMembers.ts`, `src/endpoints/hockeyFantasyTeams.ts`):
 
 | Endpoint | What it does |
 | --- | --- |
 | `PUT /api/hockey/members/:appUserId` | Adds or updates a member: `{name, email, profile}`. Without `profile` (or `null`), the profile stays as it is; with it, every profile field is set, so one left out is cleared. `201` when added, `200` when it existed |
 | `GET /api/hockey/members/:appUserId` | The member, without the notes; `404` when there's none |
-| `DELETE /api/hockey/members/:appUserId` | Deletes the member; `204` whether or not there was one |
+| `DELETE /api/hockey/members/:appUserId` | Deletes the member with its fantasy teams; `204` whether or not there was one |
+| `GET /api/hockey/members/:appUserId/fantasy-teams` | The member's teams, newest first: `{docs: [team]}`; none when there's no member |
+| `POST /api/hockey/members/:appUserId/fantasy-teams` | Adds a team: `{name, league, players: [{playerId, fullName, position, team}]}`, at most 40 players. `201`; `404` when there's no member |
+| `GET`, `PUT`, `DELETE /api/hockey/members/:appUserId/fantasy-teams/:teamId` | One of the member's teams; `PUT` replaces it with the same body as the `POST`. `404` for another member's team |
+
+A team is answered as `{id, name, league, players: [{playerId, fullName, position, team}], createdAt, updatedAt}`.
 
 ```bash
 curl -X PUT -H "X-API-Key: $HOCKEY_API_KEY" -H 'Content-Type: application/json' \
