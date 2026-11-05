@@ -10,6 +10,7 @@ import { ensureChatRetentionIndexes } from './collections/chatRetention'
 import { ChatSessions } from './collections/ChatSessions'
 import { Clients } from './collections/Clients'
 import { Events } from './collections/Events'
+import { HockeyFantasyTeams } from './collections/HockeyFantasyTeams'
 import { HockeyMembers } from './collections/HockeyMembers'
 import { MarketMaterials } from './collections/MarketMaterials'
 import { MarketPrices } from './collections/MarketPrices'
@@ -45,6 +46,13 @@ import {
   appPushNotificationStartEndpoint,
 } from './endpoints/appPushNotifications'
 import { healthEndpoint } from './endpoints/health'
+import {
+  hockeyFantasyTeamCreateEndpoint,
+  hockeyFantasyTeamDeleteEndpoint,
+  hockeyFantasyTeamEndpoint,
+  hockeyFantasyTeamSaveEndpoint,
+  hockeyFantasyTeamsEndpoint,
+} from './endpoints/hockeyFantasyTeams'
 import {
   hockeyMemberDeleteEndpoint,
   hockeyMemberEndpoint,
@@ -115,6 +123,7 @@ export default buildConfig({
     MarketPrices,
     PushNotifications,
     HockeyMembers,
+    HockeyFantasyTeams,
     ...vigorCollections,
   ],
   cors: allowedOrigins,
@@ -150,6 +159,11 @@ export default buildConfig({
     appPushNotificationStartEndpoint,
     appPushNotificationResultEndpoint,
     healthEndpoint,
+    hockeyFantasyTeamCreateEndpoint,
+    hockeyFantasyTeamDeleteEndpoint,
+    hockeyFantasyTeamEndpoint,
+    hockeyFantasyTeamSaveEndpoint,
+    hockeyFantasyTeamsEndpoint,
     hockeyMemberDeleteEndpoint,
     hockeyMemberEndpoint,
     hockeyMemberSaveEndpoint,

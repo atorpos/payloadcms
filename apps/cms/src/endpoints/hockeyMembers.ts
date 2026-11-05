@@ -14,7 +14,7 @@ import { refuseWithoutApiKey } from './appApiKey'
  * Server to server only: the API sends `X-API-Key: <HOCKEY_API_KEY>`, its own key, separate from the VgemsAI
  * app's. While HOCKEY_API_KEY is empty every `/api/hockey/...` endpoint answers 404, as if it didn't exist.
  */
-const refuseWithoutHockeyApiKey = (req: PayloadRequest) =>
+export const refuseWithoutHockeyApiKey = (req: PayloadRequest) =>
   refuseWithoutApiKey(req, process.env.HOCKEY_API_KEY)
 
 /** What the API sends: the account's name and email, and the profile people fill in in the app */
@@ -132,8 +132,8 @@ export const hockeyMemberEndpoint: Endpoint = {
 }
 
 /**
- * `DELETE /api/hockey/members/:appUserId` - deletes the member of an app account, when its owner deletes the
- * account in the app. Answers `204` whether or not there was one, so the API can safely try again.
+ * `DELETE /api/hockey/members/:appUserId` - deletes the member of an app account, with its fantasy teams, when its
+ * owner deletes the account in the app. Answers `204` whether or not there was one, so the API can safely try again.
  */
 export const hockeyMemberDeleteEndpoint: Endpoint = {
   handler: async (req) => {
@@ -195,10 +195,12 @@ const toAppMember = (member: HockeyMember) => ({
   updatedAt: member.updatedAt,
 })
 
-const findMember = async (req: PayloadRequest, appUserId: number) => {
+export const findMember = async (req: PayloadRequest, appUserId: number) => {
   const { docs } = await req.payload.find({
     collection: 'hockey-members',
     depth: 0,
+    // Only the member: not its fantasy teams
+    joins: false,
     limit: 1,
     overrideAccess: true,
     pagination: false,
@@ -209,20 +211,20 @@ const findMember = async (req: PayloadRequest, appUserId: number) => {
 }
 
 /** The `:appUserId` route parameter, when it is a positive whole number */
-const routeAppUserId = (req: PayloadRequest) => {
+export const routeAppUserId = (req: PayloadRequest) => {
   const appUserId = Number(req.routeParams?.appUserId)
 
   return Number.isSafeInteger(appUserId) && appUserId > 0 ? appUserId : null
 }
 
-const invalidAppUserId = () =>
+export const invalidAppUserId = () =>
   Response.json(
     { errors: [{ message: 'appUserId must be a positive whole number.', path: 'appUserId' }] },
     { status: 400 },
   )
 
 /** `400` with each invalid field's message and path */
-const validationErrors = (error: unknown) => {
+export const validationErrors = (error: unknown) => {
   if (error instanceof ValidationError) {
     return Response.json(
       { errors: error.data.errors.map(({ message, path }) => ({ message, path })) },
@@ -234,5 +236,5 @@ const validationErrors = (error: unknown) => {
 }
 
 /** Trimmed text; anything else, or only spaces, is left out */
-const text = (value: unknown) =>
+export const text = (value: unknown) =>
   typeof value === 'string' && value.trim() ? value.trim() : undefined

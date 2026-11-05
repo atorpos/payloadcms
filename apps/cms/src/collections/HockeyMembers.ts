@@ -9,7 +9,8 @@ import { loggedIn } from '../access/loggedIn'
  * time the profile screen opens, so a change made here shows in the app.
  *
  * The login itself (email and password) stays in the HockeyPoolCap API: name and email are copies, changed only
- * in the app. Private: every operation, including reading, requires a logged-in user.
+ * in the app. Their fantasy teams are in src/collections/HockeyFantasyTeams.ts, and are deleted with them.
+ * Private: every operation, including reading, requires a logged-in user.
  */
 export const HockeyMembers: CollectionConfig = {
   slug: 'hockey-members',
@@ -23,12 +24,24 @@ export const HockeyMembers: CollectionConfig = {
   admin: {
     defaultColumns: ['name', 'displayName', 'favoriteTeam', 'location.country', 'createdAt'],
     description:
-      'Everyone with an account in the HockeyPoolCap app. What you change here shows on their profile in the app.',
+      'Everyone with an account in the HockeyPoolCap app. What you change here shows on their profile in the app. Deleting a member deletes their fantasy teams too.',
     group: 'HockeyPoolCap App',
     listSearchableFields: ['name', 'email', 'displayName'],
     useAsTitle: 'name',
   },
   defaultSort: '-createdAt',
+  hooks: {
+    // Their fantasy teams mean nothing without them: deleted with them, from the app or here
+    afterDelete: [
+      async ({ doc, req }) => {
+        await req.payload.db.deleteMany({
+          collection: 'hockey-fantasy-teams',
+          req,
+          where: { member: { equals: doc.id } },
+        })
+      },
+    ],
+  },
   labels: {
     plural: 'Members',
     singular: 'Member',
@@ -128,6 +141,18 @@ export const HockeyMembers: CollectionConfig = {
       admin: {
         description: 'For the team only: never sent to the app',
       },
+    },
+    {
+      name: 'fantasyTeams',
+      type: 'join',
+      admin: {
+        defaultColumns: ['name', 'league', 'updatedAt'],
+        description: 'The fantasy teams they follow in the app, saved to their account.',
+      },
+      collection: 'hockey-fantasy-teams',
+      defaultSort: '-createdAt',
+      label: 'Fantasy Teams',
+      on: 'member',
     },
     {
       name: 'appUserId',
