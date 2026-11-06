@@ -130,3 +130,141 @@ export const currentSeason = (now = new Date()) =>
   now.getUTCMonth() >= 6 ? now.getUTCFullYear() : now.getUTCFullYear() - 1
 
 export const seasonLabel = (season: number) => `${season}-${String((season + 1) % 100).padStart(2, '0')}`
+
+// --- Researched careers (PUT /api/v1/admin/players/{id}/career; the API's CareerDocument) ----------------------------
+
+export type ResearchStatus = 'NEEDS_REVIEW' | 'VERIFIED'
+
+export type CareerBio = {
+  birthCountry: null | string
+  birthDate: null | string
+  birthPlace: null | string
+  draft: {
+    overall: null | number
+    round: null | number
+    team: null | string
+    year: null | number
+  } | null
+  heightCm: null | number
+  position: null | string
+  shootsCatches: null | string
+  weightKg: null | number
+}
+
+export type CareerAchievement = { detail: null | string; season: null | number; title: string }
+
+export type TransactionType = 'BUYOUT' | 'DRAFT' | 'OTHER' | 'RELEASE' | 'SIGNING' | 'TRADE' | 'WAIVER_CLAIM'
+
+export type CareerTransaction = {
+  acquired: string[]
+  date: null | string
+  fromTeam: null | string
+  given: string[]
+  notes: null | string
+  retainedPercent: null | number
+  season: null | number
+  toTeam: null | string
+  type: TransactionType
+}
+
+export type CareerContractYear = {
+  baseSalary: null | number
+  clause: null | string
+  performanceBonus: null | number
+  season: number
+  signingBonus: null | number
+}
+
+export type CareerContract = {
+  capHit: number
+  clauses: null | string
+  contractType: 'ENTRY_LEVEL' | 'STANDARD' | 'THIRTY_FIVE_PLUS'
+  description: null | string
+  endSeason: number
+  expiryStatus: 'RFA' | 'UFA' | null
+  noMovementClause: boolean | null
+  noTradeClause: boolean | null
+  notes: null | string
+  retentions: { percent: number; team: string }[]
+  signedOn: null | string
+  signingTeam: null | string
+  startSeason: number
+  totalValue: null | number
+  twoWay: boolean | null
+  years: CareerContractYear[]
+}
+
+export type CareerStatLine = {
+  age: null | number
+  assists: null | number
+  gamesPlayed: number
+  gameType: 'PLAYOFFS' | 'REGULAR'
+  goals: null | number
+  goalsAgainstAverage: null | number
+  losses: null | number
+  note: null | string
+  overtimeLosses: null | number
+  penaltyMinutes: null | number
+  plusMinus: null | number
+  points: null | number
+  savePercentage: null | number
+  season: number
+  shutouts: null | number
+  team: string
+  wins: null | number
+}
+
+export type Career = {
+  achievements: CareerAchievement[]
+  bio: CareerBio | null
+  contracts: CareerContract[]
+  model: null | string
+  notes: null | string
+  researchedAt: null | string
+  researchStatus: null | ResearchStatus
+  sources: string[]
+  stats: CareerStatLine[]
+  transactions: CareerTransaction[]
+}
+
+/** `GET /api/v1/admin/players/{id}/career`, and what saving it answers */
+export type CareerResponse = { career: Career; fullName: string; playerId: number; warnings: string[] }
+
+/** `GET /api/v1/admin/research` */
+export type ResearchEntry = {
+  model?: null | string
+  player: NhlPlayer
+  researchedAt?: null | string
+  researchStatus?: null | ResearchStatus
+}
+
+/** `GET /api/v1/admin/cap-summaries`: a team's cap in a season, as last calculated */
+export type TeamCapSummary = {
+  calculatedAt: string
+  capHit: number
+  capLowerLimit?: null | number
+  capSpace?: null | number
+  capUpperLimit?: null | number
+  contractLimit: number
+  contracts: number
+  ltirCapHit: number
+  season: number
+  seasonLabel: string
+  team: NhlTeamRef
+}
+
+export const RESEARCH_STATUSES = [
+  { label: 'Needs review', value: 'NEEDS_REVIEW' },
+  { label: 'Verified', value: 'VERIFIED' },
+  { label: 'Never researched', value: 'NONE' },
+]
+
+export const TRANSACTION_TYPES: { label: string; value: TransactionType }[] = [
+  { label: 'Draft', value: 'DRAFT' },
+  { label: 'Trade', value: 'TRADE' },
+  { label: 'Signing', value: 'SIGNING' },
+  { label: 'Waiver claim', value: 'WAIVER_CLAIM' },
+  { label: 'Release', value: 'RELEASE' },
+  { label: 'Buyout', value: 'BUYOUT' },
+  { label: 'Other', value: 'OTHER' },
+]

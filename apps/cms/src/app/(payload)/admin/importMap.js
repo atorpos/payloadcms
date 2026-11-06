@@ -33,6 +33,7 @@ import { LLMInstructionsCell as LLMInstructionsCell_ab83ff7e88da8d3530831f296ec4
 import { NhlNavLinks as NhlNavLinks_f23b31150373cc8526a40f7b043bb318 } from '../../../components/NhlData/NhlNavLinks'
 import { NhlPlayerView as NhlPlayerView_b21e2873a7f86357431c3046dc9ad3d9 } from '../../../components/NhlData/NhlPlayerView'
 import { NhlPlayersView as NhlPlayersView_abe430ff3bdcf82c54fb2226b443cbe1 } from '../../../components/NhlData/NhlPlayersView'
+import { NhlReviewView as NhlReviewView_f516e4392875fc9872fdfa358d6c0cdc } from '../../../components/NhlData/NhlReviewView'
 import { NhlTeamView as NhlTeamView_71264029c0e3f8587f827ee3b27b017b } from '../../../components/NhlData/NhlTeamView'
 import { NhlTeamsView as NhlTeamsView_d230c53cc3db262346ac38107e328bd0 } from '../../../components/NhlData/NhlTeamsView'
 import { TwoFactorView as TwoFactorView_565539fe0451e8014836ad409a6df033 } from '../../../components/TwoFactorView'
@@ -83,6 +84,7 @@ export const importMap = {
   "/components/NhlData/NhlNavLinks#NhlNavLinks": NhlNavLinks_f23b31150373cc8526a40f7b043bb318,
   "/components/NhlData/NhlPlayerView#NhlPlayerView": NhlPlayerView_b21e2873a7f86357431c3046dc9ad3d9,
   "/components/NhlData/NhlPlayersView#NhlPlayersView": NhlPlayersView_abe430ff3bdcf82c54fb2226b443cbe1,
+  "/components/NhlData/NhlReviewView#NhlReviewView": NhlReviewView_f516e4392875fc9872fdfa358d6c0cdc,
   "/components/NhlData/NhlTeamView#NhlTeamView": NhlTeamView_71264029c0e3f8587f827ee3b27b017b,
   "/components/NhlData/NhlTeamsView#NhlTeamsView": NhlTeamsView_d230c53cc3db262346ac38107e328bd0,
   "/components/TwoFactorView#TwoFactorView": TwoFactorView_565539fe0451e8014836ad409a6df033,

@@ -58,15 +58,60 @@ export const nhlPlayerStatsDeleteEndpoint: Endpoint = {
   path: '/nhl-data/players/:id/stats/:season',
 }
 
+/**
+ * `PUT /api/nhl-data/players/:id/career`: the player's whole researched career, which replaces what's stored (his
+ * contracts included). Answers it as stored, with `warnings` for what the API couldn't use.
+ */
+export const nhlCareerSaveEndpoint: Endpoint = {
+  handler: async (req) => {
+    const id = playerID(req)
+
+    return id ? forward(req, 'PUT', `/api/v1/admin/players/${id}/career`) : notFound()
+  },
+  method: 'put',
+  path: '/nhl-data/players/:id/career',
+}
+
+/** `PUT /api/nhl-data/players/:id/career/status`: `{ researchStatus: 'VERIFIED' }` marks it checked */
+export const nhlCareerStatusEndpoint: Endpoint = {
+  handler: async (req) => {
+    const id = playerID(req)
+
+    return id ? forward(req, 'PUT', `/api/v1/admin/players/${id}/career/status`) : notFound()
+  },
+  method: 'put',
+  path: '/nhl-data/players/:id/career/status',
+}
+
+/** `POST /api/nhl-data/teams/:abbreviation/cap-summaries`: works out and stores the team's cap this season and next */
+export const nhlCapSummariesEndpoint: Endpoint = {
+  handler: async (req) => {
+    const abbreviation = String(req.routeParams?.abbreviation ?? '')
+
+    if (!/^[A-Za-z]{2,5}$/.test(abbreviation)) {
+      return notFound()
+    }
+
+    return forward(req, 'POST', `/api/v1/admin/cap-summaries?team=${abbreviation.toUpperCase()}`, { body: false })
+  },
+  method: 'post',
+  path: '/nhl-data/teams/:abbreviation/cap-summaries',
+}
+
 /** Sends the request's JSON body on to the API and answers what it answered */
-const forward = async (req: PayloadRequest, method: string, path: string) => {
+const forward = async (
+  req: PayloadRequest,
+  method: string,
+  path: string,
+  { body: hasBody = method !== 'DELETE' }: { body?: boolean } = {},
+) => {
   if (!req.user) {
     return Response.json({ errors: [{ message: 'Log in to change the NHL data.' }] }, { status: 401 })
   }
 
   let body: unknown
 
-  if (method !== 'DELETE') {
+  if (hasBody) {
     body = await req.json?.().catch(() => null)
 
     if (!body || typeof body !== 'object' || Array.isArray(body)) {

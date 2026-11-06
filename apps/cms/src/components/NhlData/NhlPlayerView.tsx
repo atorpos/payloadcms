@@ -2,28 +2,24 @@ import type { AdminViewServerProps } from 'payload'
 
 import React from 'react'
 
-import type { NhlPlayerAdmin, NhlTeam } from '../../nhl/types'
+import type { CareerResponse, NhlPlayerAdmin, NhlTeam } from '../../nhl/types'
 
 import { PLAYER_FIELD_LABELS } from '../../nhl/fields'
 import { errorMessage, hockeyApi, HockeyApiError } from '../../nhl/hockeyApi'
 import { currentSeason, formatMoney, optionLabel, POSITIONS } from '../../nhl/types'
+import { CareerEditor } from './CareerEditor'
 import { KeptNote } from './KeptNote'
 import { NhlLoadError, NhlPage, nhlURL, segments } from './NhlPage'
 import { PlayerForm } from './PlayerForm'
 import { StatsEditor } from './StatsEditor'
 
-const CONTRACT_TYPES: Record<string, string> = {
-  ENTRY_LEVEL: 'Entry-level',
-  STANDARD: 'Standard',
-  THIRTY_FIVE_PLUS: '35+',
-}
-
-/** `/admin/nhl/players/:id`: a player's details and season stats, to change, and his contracts */
+/** `/admin/nhl/players/:id`: a player's details, season stats and whole career, to check and change */
 export async function NhlPlayerView(props: AdminViewServerProps) {
   const id = segments(props)[2] ?? ''
   const breadcrumbs = [{ href: nhlURL(props, '/players'), label: 'Players' }]
 
   let detail: NhlPlayerAdmin | null = null
+  let career: CareerResponse | null = null
   let teams: NhlTeam[] = []
   let error: null | string = null
 
@@ -31,9 +27,10 @@ export async function NhlPlayerView(props: AdminViewServerProps) {
     error = 'There’s no such player.'
   } else {
     try {
-      ;[detail, teams] = await Promise.all([
+      ;[detail, teams, career] = await Promise.all([
         hockeyApi<NhlPlayerAdmin>(`/api/v1/admin/players/${id}`),
         hockeyApi<NhlTeam[]>('/api/v1/teams'),
+        hockeyApi<CareerResponse>(`/api/v1/admin/players/${id}/career`),
       ])
     } catch (caught) {
       error =
@@ -41,7 +38,7 @@ export async function NhlPlayerView(props: AdminViewServerProps) {
     }
   }
 
-  if (!detail) {
+  if (!detail || !career) {
     return (
       <NhlPage breadcrumbs={breadcrumbs} props={props} title="Player">
         <NhlLoadError message={error ?? ''} />
@@ -49,7 +46,8 @@ export async function NhlPlayerView(props: AdminViewServerProps) {
     )
   }
 
-  const { contracts, player, stats } = detail
+  const { player, stats } = detail
+  const hasStatLines = career.career.stats.length > 0
   const teamOptions = [...teams]
     .sort((a, b) => a.name.localeCompare(b.name))
     .map((team) => ({ label: `${team.name} (${team.abbreviation})`, value: team.abbreviation }))
@@ -81,48 +79,31 @@ export async function NhlPlayerView(props: AdminViewServerProps) {
 
       <section className="nhl-data__section">
         <h2>Season stats</h2>
-        <p className="nhl-data__hint">
-          Entered by hand (API Ninjas has none). The app’s top players lists and fantasy points come from them.
-        </p>
-        <StatsEditor currentSeason={currentSeason()} isGoalie={player.position === 'G'} playerID={player.id} stats={stats} />
+        {hasStatLines ? (
+          <>
+            <p className="nhl-data__hint">
+              Added up from his regular-season lines in Career below (one per team): change those, and these follow
+              when the career is saved. The app’s top players lists and fantasy points come from them.
+            </p>
+            <SeasonTotals isGoalie={player.position === 'G'} stats={stats} />
+          </>
+        ) : (
+          <>
+            <p className="nhl-data__hint">
+              Entered by hand (API Ninjas has none). The app’s top players lists and fantasy points come from them.
+            </p>
+            <StatsEditor currentSeason={currentSeason()} isGoalie={player.position === 'G'} playerID={player.id} stats={stats} />
+          </>
+        )}
       </section>
 
-      <section className="nhl-data__section">
-        <h2>Contracts</h2>
-        {contracts.length === 0 ? (
-          <p className="nhl-data__empty">No contracts.</p>
-        ) : (
-          <div className="nhl-data__table-wrap">
-            <table className="nhl-data__table">
-              <thead>
-                <tr>
-                  <th>Seasons</th>
-                  <th>Type</th>
-                  <th className="nhl-data__number">Cap hit</th>
-                  <th className="nhl-data__number">Total</th>
-                  <th>Then</th>
-                  <th>Clauses</th>
-                </tr>
-              </thead>
-              <tbody>
-                {[...contracts].reverse().map((contract) => (
-                  <tr key={contract.id}>
-                    <td>{contract.seasons ?? `${contract.startSeason}–${contract.endSeason}`}</td>
-                    <td>{CONTRACT_TYPES[contract.contractType ?? ''] ?? contract.contractType ?? '—'}</td>
-                    <td className="nhl-data__number">{formatMoney(contract.capHit)}</td>
-                    <td className="nhl-data__number">{formatMoney(contract.totalValue)}</td>
-                    <td>{contract.expiryStatus ?? '—'}</td>
-                    <td>
-                      {[contract.noMovementClause && 'NMC', contract.noTradeClause && 'NTC'].filter(Boolean).join(', ') ||
-                        '—'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-        <p className="nhl-data__hint">Contracts are changed with the API’s admin endpoints (README: “Endpoints”).</p>
+      <section className="nhl-data__section" id="career">
+        <h2>Career</h2>
+        <p className="nhl-data__hint">
+          His whole career, as the research script found it with Claude: check it against the sources, correct what’s
+          wrong, and mark it verified. Saving replaces it all in the HockeyPoolCap API, his contracts included.
+        </p>
+        <CareerEditor currentSeason={currentSeason()} initial={career} isGoalie={player.position === 'G'} />
       </section>
 
       <section className="nhl-data__section nhl-data__source">
@@ -141,5 +122,56 @@ export async function NhlPlayerView(props: AdminViewServerProps) {
         </dl>
       </section>
     </NhlPage>
+  )
+}
+
+/** His season stats, read-only: what his regular-season lines add up to */
+function SeasonTotals({ isGoalie, stats }: { isGoalie: boolean; stats: NhlPlayerAdmin['stats'] }) {
+  const columns: [string, (line: NhlPlayerAdmin['stats'][number]) => null | number | string | undefined][] = isGoalie
+    ? [
+        ['GP', (line) => line.gamesPlayed],
+        ['W', (line) => line.wins],
+        ['L', (line) => line.losses],
+        ['OTL', (line) => line.overtimeLosses],
+        ['SO', (line) => line.shutouts],
+        ['GAA', (line) => line.goalsAgainstAverage?.toFixed(2)],
+        ['SV%', (line) => line.savePercentage?.toFixed(3)],
+      ]
+    : [
+        ['GP', (line) => line.gamesPlayed],
+        ['G', (line) => line.goals],
+        ['A', (line) => line.assists],
+        ['PTS', (line) => line.points],
+        ['+/-', (line) => line.plusMinus],
+        ['PIM', (line) => line.penaltyMinutes],
+      ]
+
+  return (
+    <div className="nhl-data__table-wrap">
+      <table className="nhl-data__table">
+        <thead>
+          <tr>
+            <th>Season</th>
+            {columns.map(([label]) => (
+              <th className="nhl-data__number" key={label}>
+                {label}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {stats.map((line) => (
+            <tr key={line.season}>
+              <td>{line.seasonLabel}</td>
+              {columns.map(([label, value]) => (
+                <td className="nhl-data__number" key={label}>
+                  {value(line) ?? '—'}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   )
 }

@@ -1263,11 +1263,21 @@ API and save to it, so nothing is copied into this CMS:
   /admin/nhl/...                              /api/nhl-data/...                                /api/v1/admin/... → PostgreSQL
 ```
 
-- **Teams** (`/admin/nhl/teams`): every team; a team's name, city, conference and division, and its players.
+- **Teams** (`/admin/nhl/teams`): every team; a team's name, city, conference and division, its salary cap this
+  season and next as last worked out (with a button to work it out again), and its players.
 - **Players** (`/admin/nhl/players`): search by name, team, position and roster status; a player's name, position,
   shoots/catches, number, birth date and country, team, roster status and draft; his **season stats** (add a season,
   change one, or delete one entered by mistake), which the app's top players and fantasy points come from; and his
-  contracts, to read.
+  **career** (below).
+- **Review** (`/admin/nhl/review`): the players whose career the HockeyPoolCap API's research script found with
+  Claude (its `scripts/research`), waiting to be checked; also those verified and those never researched, by team.
+- **Career**, on each player's screen: what the research found, with its sources and what it wasn't sure of. Check it
+  against the sources and correct it: birthplace, height and weight; achievements; transactions (the draft, trades with
+  what each side got, signings...); contracts, with each season's salary, bonuses and clause and the teams that kept
+  part of the cap hit; and his stat line for each team in each season, regular season and playoffs. **Save** replaces
+  the whole career in the API (his contracts included) and adds each season's regular-season lines up into his season
+  stats; **Save and mark verified** also takes him off the Review list. What the API couldn't use (e.g. a team it
+  doesn't know) is listed after saving.
 - **The daily import from API Ninjas** updates names, numbers, teams and the like every morning. What you change here is
   kept from it ("Kept" next to the field), unless you untick "Keep my changes from the daily import". "Let the import
   update them again" hands those fields back to API Ninjas. Draft details, stats and contracts are never imported.
@@ -1276,7 +1286,8 @@ API and save to it, so nothing is copied into this CMS:
 
 The screens are custom admin views (`src/components/NhlData`, registered in `payload.config.ts`), so they're not
 collections. They save through `src/endpoints/nhlData.ts`, which only logged-in users may call, and
-`src/nhl/hockeyApi.ts` calls the API from the server, so the key never reaches the browser.
+`src/nhl/hockeyApi.ts` calls the API from the server, so the key never reaches the browser. The career editor is
+`CareerEditor.tsx`; it saves through `PUT /api/nhl-data/players/:id/career`.
 
 **Connecting the API (once):** generate a key with `openssl rand -hex 32`, set it as `HOCKEY_API_ADMIN_KEY` in this
 server's `.env` and as `ADMIN_API_KEY` on the HockeyPoolCap API, with the API's address as `HOCKEY_API_URL` here (e.g.

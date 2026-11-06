@@ -284,3 +284,223 @@
     grid-column: 1 / -1;
   }
 }
+
+/* --- Review and career ------------------------------------------------------------------------------------------- */
+
+.nhl-data__filters--review {
+  grid-template-columns: repeat(2, minmax(10rem, 16rem)) auto;
+  justify-content: start;
+}
+
+.nhl-data__status {
+  display: inline-block;
+  padding: 0 var(--spacer-1-5);
+  font-size: 0.85em;
+  font-weight: 550;
+  white-space: nowrap;
+  border-radius: var(--radius-chip, var(--radius-small));
+}
+
+.nhl-data__status--needs_review {
+  color: var(--color-text-warning, #92400e);
+  background: var(--color-bg-warning-tertiary, #fef3c7);
+}
+
+.nhl-data__status--verified {
+  color: var(--color-text-success, #166534);
+  background: var(--color-bg-success-tertiary, #dcfce7);
+}
+
+.nhl-data__status--none {
+  color: var(--color-text-secondary);
+  background: var(--color-bg-secondary);
+}
+
+.nhl-data__career {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacer-3);
+}
+
+.nhl-data__research {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacer-2);
+  padding: var(--spacer-3);
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-medium);
+}
+
+.nhl-data__research p {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacer-1-5);
+  align-items: center;
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+.nhl-data__sources {
+  margin: var(--spacer-1) 0 0;
+  padding-inline-start: var(--spacer-4);
+  word-break: break-all;
+}
+
+.nhl-data__field textarea,
+.nhl-data__card textarea {
+  width: 100%;
+  padding: var(--spacer-1-5) var(--spacer-2);
+  font: inherit;
+  color: var(--color-text, inherit);
+  background: var(--color-bg, transparent);
+  border: var(--stroke-width-small, 1px) solid var(--color-border, currentColor);
+  border-radius: var(--radius-medium);
+  resize: vertical;
+}
+
+.nhl-data__panel {
+  padding: var(--spacer-2) var(--spacer-3) var(--spacer-3);
+  border: var(--stroke-width-small, 1px) solid var(--color-border);
+  border-radius: var(--radius-medium);
+}
+
+.nhl-data__panel > summary {
+  padding-block: var(--spacer-1);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.nhl-data__panel[open] > summary {
+  margin-block-end: var(--spacer-2);
+}
+
+.nhl-data__card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacer-2);
+  margin-block-end: var(--spacer-3);
+  padding: var(--spacer-3);
+  background: var(--color-bg);
+  border: var(--stroke-width-small, 1px) solid var(--color-border);
+  border-radius: var(--radius-medium);
+}
+
+.nhl-data__card h3,
+.nhl-data__card h4 {
+  margin: 0;
+}
+
+.nhl-data__card h4 {
+  font-size: 0.95em;
+  color: var(--color-text-secondary);
+}
+
+.nhl-data__grid--dense {
+  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+  gap: var(--spacer-2);
+}
+
+.nhl-data__grid--wide {
+  grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+  gap: var(--spacer-2);
+}
+
+.nhl-data__checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacer-3);
+}
+
+.nhl-data__inline {
+  display: flex;
+  gap: var(--spacer-2);
+  align-items: center;
+}
+
+.nhl-data__inline input {
+  width: 8rem;
+  min-height: 2.25rem;
+  padding: var(--spacer-1) var(--spacer-1-5);
+  font: inherit;
+  color: var(--color-text, inherit);
+  background: var(--color-bg, transparent);
+  border: var(--stroke-width-small, 1px) solid var(--color-border, currentColor);
+  border-radius: var(--radius-small);
+}
+
+.nhl-data__table--edit td {
+  padding: var(--spacer-1);
+  vertical-align: top;
+}
+
+.nhl-data__table--edit input {
+  width: 100%;
+  min-width: 6rem;
+  padding: var(--spacer-1) var(--spacer-1-5);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text, inherit);
+  background: var(--color-bg, transparent);
+  border: var(--stroke-width-small, 1px) solid var(--color-border, currentColor);
+  border-radius: var(--radius-small);
+}
+
+.nhl-data__table--edit .nhl-data__cell--small input {
+  min-width: 3.75rem;
+}
+
+.nhl-data__table--edit .nhl-data__cell--season input,
+.nhl-data__table--edit .nhl-data__cell--team input {
+  min-width: 4.5rem;
+}
+
+.nhl-data__table--edit .nhl-data__cell--season .nhl-data__hint {
+  display: block;
+  font-size: 0.8em;
+}
+
+.nhl-data__table--edit tbody tr:hover {
+  background: none;
+}
+
+.nhl-data__field input[aria-invalid='true'],
+.nhl-data__table--edit input[aria-invalid='true'],
+.nhl-data__inline input[aria-invalid='true'] {
+  border-color: var(--color-border-danger-strong, #b91c1c);
+}
+
+.nhl-data__add {
+  align-self: flex-start;
+  margin: var(--spacer-1) 0 0;
+}
+
+.nhl-data__warnings {
+  padding: var(--spacer-2) var(--spacer-3);
+  color: var(--color-text-warning, #92400e);
+  background: var(--color-bg-warning-tertiary, #fef3c7);
+  border-radius: var(--radius-medium);
+}
+
+.nhl-data__warnings ul {
+  margin: var(--spacer-1) 0 0;
+  padding-inline-start: var(--spacer-4);
+}
+
+.nhl-data__actions--sticky {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  padding-block: var(--spacer-2);
+  background: var(--color-bg);
+  border-block-start: var(--stroke-width-small, 1px) solid var(--color-border);
+}
+
+.nhl-data__over {
+  color: var(--color-text-danger, #b91c1c);
+}
+
+.nhl-data__card > .nhl-data__link-button,
+.nhl-data__card > div > .nhl-data__link-button {
+  align-self: flex-start;
+  margin-inline-start: 0;
+}
