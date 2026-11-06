@@ -58,6 +58,12 @@ import {
   hockeyMemberEndpoint,
   hockeyMemberSaveEndpoint,
 } from './endpoints/hockeyMembers'
+import {
+  nhlPlayerSaveEndpoint,
+  nhlPlayerStatsDeleteEndpoint,
+  nhlPlayerStatsSaveEndpoint,
+  nhlTeamSaveEndpoint,
+} from './endpoints/nhlData'
 import { locales } from './locales'
 import { migrations } from './migrations'
 import { personalCollections, personalGlobals } from './personal'
@@ -92,7 +98,31 @@ const allowedOrigins = [
 export default buildConfig({
   admin: {
     components: {
+      // The NHL Data group: screens for the HockeyPoolCap API's NHL data (src/components/NhlData)
+      afterNavLinks: ['/components/NhlData/NhlNavLinks#NhlNavLinks'],
       views: {
+        // The NHL data in the HockeyPoolCap API's PostgreSQL database, read and changed through its admin
+        // endpoints (src/nhl/hockeyApi.ts); nothing is stored here
+        nhlPlayer: {
+          Component: '/components/NhlData/NhlPlayerView#NhlPlayerView',
+          exact: true,
+          path: '/nhl/players/:id',
+        },
+        nhlPlayers: {
+          Component: '/components/NhlData/NhlPlayersView#NhlPlayersView',
+          exact: true,
+          path: '/nhl/players',
+        },
+        nhlTeam: {
+          Component: '/components/NhlData/NhlTeamView#NhlTeamView',
+          exact: true,
+          path: '/nhl/teams/:abbreviation',
+        },
+        nhlTeams: {
+          Component: '/components/NhlData/NhlTeamsView#NhlTeamsView',
+          exact: true,
+          path: '/nhl/teams',
+        },
         // Two-factor setup and login check, see src/proxy.ts
         twoFactor: {
           Component: '/components/TwoFactorView#TwoFactorView',
@@ -167,6 +197,10 @@ export default buildConfig({
     hockeyMemberDeleteEndpoint,
     hockeyMemberEndpoint,
     hockeyMemberSaveEndpoint,
+    nhlPlayerSaveEndpoint,
+    nhlPlayerStatsDeleteEndpoint,
+    nhlPlayerStatsSaveEndpoint,
+    nhlTeamSaveEndpoint,
   ],
   globals: [...personalGlobals, ...vigorGlobals],
   // Only fields marked `localized: true` have a version per language; see src/locales.ts

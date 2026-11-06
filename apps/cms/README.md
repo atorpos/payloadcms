@@ -45,6 +45,7 @@ uses to test templates.
 | `src/collections/ChatSessions.ts`, `…/ChatMessages.ts` | VgemsAI app conversations, deleted after 90 days (see "Chats")             |
 | `src/collections/HockeyMembers.ts`, `src/endpoints/hockeyMembers.ts` | Profiles of the HockeyPoolCap app's accounts (see "The HockeyPoolCap app") |
 | `src/collections/HockeyFantasyTeams.ts`, `src/endpoints/hockeyFantasyTeams.ts` | The fantasy teams those accounts follow in the app |
+| `src/components/NhlData`, `src/nhl`, `src/endpoints/nhlData.ts` | The NHL Data screens: the HockeyPoolCap API's teams, players and stats, read and changed there (see "NHL data") |
 | `src/app/(frontend)/ios-app/`, `scripts/import-legal-pages.ts` | Privacy Policy and Terms of Use of the app and the Vigor website (see "Privacy policy and terms of use") |
 | `src/vigor/`, `src/locales.ts`             | Content of the Vigor website in four languages (see "Vigor website")                   |
 | `scripts/import-vigor.ts`                  | Copies the Vigor website's current content into the CMS (see "Vigor website")          |
@@ -1250,6 +1251,37 @@ curl -X PUT -H "X-API-Key: $HOCKEY_API_KEY" -H 'Content-Type: application/json' 
 
 Invalid values, such as a display name over 40 characters or a team that isn't an abbreviation, get `400` with
 `{"errors": [{"message": "…", "path": "favoriteTeam"}]}`.
+
+## NHL data
+
+The HockeyPoolCap app's NHL teams, players, stats and contracts live in the HockeyPoolCap API's PostgreSQL database,
+not here. The **NHL Data** group in the sidebar has screens to look through them and correct them; they read from the
+API and save to it, so nothing is copied into this CMS:
+
+```
+ NHL Data screens ── logged-in user (2FA) ──► this CMS ── X-API-Key: HOCKEY_API_ADMIN_KEY ──► HockeyPoolCap API
+  /admin/nhl/...                              /api/nhl-data/...                                /api/v1/admin/... → PostgreSQL
+```
+
+- **Teams** (`/admin/nhl/teams`): every team; a team's name, city, conference and division, and its players.
+- **Players** (`/admin/nhl/players`): search by name, team, position and roster status; a player's name, position,
+  shoots/catches, number, birth date and country, team, roster status and draft; his **season stats** (add a season,
+  change one, or delete one entered by mistake), which the app's top players and fantasy points come from; and his
+  contracts, to read.
+- **The daily import from API Ninjas** updates names, numbers, teams and the like every morning. What you change here is
+  kept from it ("Kept" next to the field), unless you untick "Keep my changes from the daily import". "Let the import
+  update them again" hands those fields back to API Ninjas. Draft details, stats and contracts are never imported.
+- Saving sends only the fields you changed. A field can't be emptied here; to take a player off his team, set his
+  roster status to Free agent or Retired.
+
+The screens are custom admin views (`src/components/NhlData`, registered in `payload.config.ts`), so they're not
+collections. They save through `src/endpoints/nhlData.ts`, which only logged-in users may call, and
+`src/nhl/hockeyApi.ts` calls the API from the server, so the key never reaches the browser.
+
+**Connecting the API (once):** generate a key with `openssl rand -hex 32`, set it as `HOCKEY_API_ADMIN_KEY` in this
+server's `.env` and as `ADMIN_API_KEY` on the HockeyPoolCap API, with the API's address as `HOCKEY_API_URL` here (e.g.
+`https://hockey.awoz.co`), and redeploy both. It's a different key from `HOCKEY_API_KEY`, which goes the other way (the
+API calling this CMS). Until it's set, the screens say what's missing.
 
 ## Two-factor authentication
 
