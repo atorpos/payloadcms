@@ -30,6 +30,11 @@ import { PhotoTextButton as PhotoTextButton_a25239b684c306c2353d089bdeb2c229 } f
 import { RelationshipFeatureClient as RelationshipFeatureClient_e70f5e05f09f93e00b997edb1ef0c864 } from '@payloadcms/richtext-lexical/client'
 import { LLMInstructionsDescription as LLMInstructionsDescription_3817bf644402e67bfe6577f60ef982de } from '@payloadcms/ui'
 import { LLMInstructionsCell as LLMInstructionsCell_ab83ff7e88da8d3530831f296ec4756a } from '@payloadcms/ui/rsc'
+import { NhlNavLinks as NhlNavLinks_f23b31150373cc8526a40f7b043bb318 } from '../../../components/NhlData/NhlNavLinks'
+import { NhlPlayerView as NhlPlayerView_b21e2873a7f86357431c3046dc9ad3d9 } from '../../../components/NhlData/NhlPlayerView'
+import { NhlPlayersView as NhlPlayersView_abe430ff3bdcf82c54fb2226b443cbe1 } from '../../../components/NhlData/NhlPlayersView'
+import { NhlTeamView as NhlTeamView_71264029c0e3f8587f827ee3b27b017b } from '../../../components/NhlData/NhlTeamView'
+import { NhlTeamsView as NhlTeamsView_d230c53cc3db262346ac38107e328bd0 } from '../../../components/NhlData/NhlTeamsView'
 import { TwoFactorView as TwoFactorView_565539fe0451e8014836ad409a6df033 } from '../../../components/TwoFactorView'
 import { WelcomeWidget as WelcomeWidget_ab83ff7e88da8d3530831f296ec4756a } from '@payloadcms/ui/rsc'
 import { CollectionCards as CollectionCards_ab83ff7e88da8d3530831f296ec4756a } from '@payloadcms/ui/rsc'
@@ -75,6 +80,11 @@ export const importMap = {
   "@payloadcms/richtext-lexical/client#RelationshipFeatureClient": RelationshipFeatureClient_e70f5e05f09f93e00b997edb1ef0c864,
   "@payloadcms/ui#LLMInstructionsDescription": LLMInstructionsDescription_3817bf644402e67bfe6577f60ef982de,
   "@payloadcms/ui/rsc#LLMInstructionsCell": LLMInstructionsCell_ab83ff7e88da8d3530831f296ec4756a,
+  "/components/NhlData/NhlNavLinks#NhlNavLinks": NhlNavLinks_f23b31150373cc8526a40f7b043bb318,
+  "/components/NhlData/NhlPlayerView#NhlPlayerView": NhlPlayerView_b21e2873a7f86357431c3046dc9ad3d9,
+  "/components/NhlData/NhlPlayersView#NhlPlayersView": NhlPlayersView_abe430ff3bdcf82c54fb2226b443cbe1,
+  "/components/NhlData/NhlTeamView#NhlTeamView": NhlTeamView_71264029c0e3f8587f827ee3b27b017b,
+  "/components/NhlData/NhlTeamsView#NhlTeamsView": NhlTeamsView_d230c53cc3db262346ac38107e328bd0,
   "/components/TwoFactorView#TwoFactorView": TwoFactorView_565539fe0451e8014836ad409a6df033,
   "@payloadcms/ui/rsc#WelcomeWidget": WelcomeWidget_ab83ff7e88da8d3530831f296ec4756a,
   "@payloadcms/ui/rsc#CollectionCards": CollectionCards_ab83ff7e88da8d3530831f296ec4756a,

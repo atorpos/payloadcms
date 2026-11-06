@@ -112,17 +112,17 @@ export type LexicalNodes_8909F562 =
   | SerializedListItemNode<LexicalNodes_8909F562>;
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "LexicalNodes_D76C6D9C".
+ * via the `definition` "LexicalNodes_04AF6417".
  */
-export type LexicalNodes_D76C6D9C =
+export type LexicalNodes_04AF6417 =
   | SerializedTextNode
   | SerializedTabNode
   | SerializedLineBreakNode
-  | SerializedParagraphNode<LexicalNodes_D76C6D9C>
+  | SerializedParagraphNode<LexicalNodes_04AF6417>
   | SerializedHorizontalRuleNode
   | SerializedUploadNode<'media'>
   | SerializedUploadNode<'personal-photos'>
-  | SerializedQuoteNode<LexicalNodes_D76C6D9C>
+  | SerializedQuoteNode<LexicalNodes_04AF6417>
   | SerializedRelationshipNode<
       | 'users'
       | 'posts'
@@ -148,11 +148,11 @@ export type LexicalNodes_D76C6D9C =
       | 'payload-preferences'
       | 'payload-migrations'
     >
-  | SerializedAutoLinkNode<LexicalNodes_D76C6D9C, LexicalLinkFields>
-  | SerializedLinkNode<LexicalNodes_D76C6D9C, LexicalLinkFields>
-  | SerializedListNode<LexicalNodes_D76C6D9C>
-  | SerializedListItemNode<LexicalNodes_D76C6D9C>
-  | SerializedHeadingNode<LexicalNodes_D76C6D9C>;
+  | SerializedAutoLinkNode<LexicalNodes_04AF6417, LexicalLinkFields>
+  | SerializedLinkNode<LexicalNodes_04AF6417, LexicalLinkFields>
+  | SerializedListNode<LexicalNodes_04AF6417>
+  | SerializedListItemNode<LexicalNodes_04AF6417>
+  | SerializedHeadingNode<LexicalNodes_04AF6417>;
 /**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "LexicalNodes_3DE324E4".
@@ -804,7 +804,7 @@ export interface Profile {
    */
   headline?: string | null;
   photo?: (string | null) | Media;
-  bio?: LexicalRichText<LexicalNodes_D76C6D9C> | null;
+  bio?: LexicalRichText<LexicalNodes_04AF6417> | null;
   links?:
     | {
         platform: 'github' | 'linkedin' | 'youtube' | 'x' | 'website' | 'other';
@@ -4025,7 +4025,6 @@ export interface ActivityWidget {
           | 'push-notifications'
           | 'hockey-members'
           | 'hockey-fantasy-teams'
-      | 'hockey-fantasy-teams'
           | 'vigor-products'
           | 'vigor-services'
           | 'vigor-news'
