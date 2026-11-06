@@ -19,11 +19,24 @@ export const sendNhlChange = async <T = unknown>(
   path: string,
   method: 'DELETE' | 'PATCH' | 'POST' | 'PUT',
   body?: object,
+): Promise<null | T> => sendCmsChange<T>(apiRoute, `/nhl-data${path}`, method, body)
+
+/**
+ * From the browser: sends a change to one of the CMS's endpoints that pass it on to the HockeyPoolCap API, e.g.
+ * `/hockey-accounts/12` (src/endpoints/hockeyAccounts.ts). Answers the saved record, or null for `204 No Content`.
+ *
+ * @throws NhlSaveError when it's refused
+ */
+export const sendCmsChange = async <T = unknown>(
+  apiRoute: string,
+  path: string,
+  method: 'DELETE' | 'PATCH' | 'POST' | 'PUT',
+  body?: object,
 ): Promise<null | T> => {
   let response: Response
 
   try {
-    response = await fetch(`${apiRoute}/nhl-data${path}`, {
+    response = await fetch(`${apiRoute}${path}`, {
       body: body ? JSON.stringify(body) : undefined,
       credentials: 'include',
       headers: body ? { 'Content-Type': 'application/json' } : undefined,

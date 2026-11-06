@@ -47,6 +47,12 @@ import {
 } from './endpoints/appPushNotifications'
 import { healthEndpoint } from './endpoints/health'
 import {
+  hockeyAccountPasskeyDeleteEndpoint,
+  hockeyAccountPasswordResetEndpoint,
+  hockeyAccountSaveEndpoint,
+  hockeyAccountSignOutEndpoint,
+} from './endpoints/hockeyAccounts'
+import {
   hockeyFantasyTeamCreateEndpoint,
   hockeyFantasyTeamDeleteEndpoint,
   hockeyFantasyTeamEndpoint,
@@ -102,8 +108,24 @@ export default buildConfig({
   admin: {
     components: {
       // The NHL Data group: screens for the HockeyPoolCap API's NHL data (src/components/NhlData)
-      afterNavLinks: ['/components/NhlData/NhlNavLinks#NhlNavLinks'],
+      afterNavLinks: [
+        '/components/NhlData/NhlNavLinks#NhlNavLinks',
+        // The Hockolic app's accounts, kept in the HockeyPoolCap API (src/components/HockeyAccounts)
+        '/components/HockeyAccounts/AccountNavLinks#AccountNavLinks',
+      ],
       views: {
+        // The app's accounts: read and changed through the HockeyPoolCap API's /api/v1/admin/users endpoints
+        // (src/endpoints/hockeyAccounts.ts); nothing about them is stored here
+        hockeyAccount: {
+          Component: '/components/HockeyAccounts/HockeyAccountView#HockeyAccountView',
+          exact: true,
+          path: '/hockey-accounts/:id',
+        },
+        hockeyAccounts: {
+          Component: '/components/HockeyAccounts/HockeyAccountsView#HockeyAccountsView',
+          exact: true,
+          path: '/hockey-accounts',
+        },
         // The NHL data in the HockeyPoolCap API's PostgreSQL database, read and changed through its admin
         // endpoints (src/nhl/hockeyApi.ts); nothing is stored here
         nhlPlayer: {
@@ -197,6 +219,10 @@ export default buildConfig({
     appPushNotificationStartEndpoint,
     appPushNotificationResultEndpoint,
     healthEndpoint,
+    hockeyAccountPasskeyDeleteEndpoint,
+    hockeyAccountPasswordResetEndpoint,
+    hockeyAccountSaveEndpoint,
+    hockeyAccountSignOutEndpoint,
     hockeyFantasyTeamCreateEndpoint,
     hockeyFantasyTeamDeleteEndpoint,
     hockeyFantasyTeamEndpoint,

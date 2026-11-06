@@ -504,3 +504,13 @@
   align-self: flex-start;
   margin-inline-start: 0;
 }
+
+/* Read by screen readers, not shown: e.g. the header of a column of buttons */
+.nhl-data__sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

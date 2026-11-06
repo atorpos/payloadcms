@@ -98,15 +98,18 @@ export const nhlCapSummariesEndpoint: Endpoint = {
   path: '/nhl-data/teams/:abbreviation/cap-summaries',
 }
 
-/** Sends the request's JSON body on to the API and answers what it answered */
-const forward = async (
+/**
+ * Sends the request's JSON body on to the API and answers what it answered. Also used by the HockeyPoolCap Accounts
+ * endpoints (src/endpoints/hockeyAccounts.ts).
+ */
+export const forward = async (
   req: PayloadRequest,
   method: string,
   path: string,
-  { body: hasBody = method !== 'DELETE' }: { body?: boolean } = {},
+  { body: hasBody = method !== 'DELETE', what = 'the NHL data' }: { body?: boolean; what?: string } = {},
 ) => {
   if (!req.user) {
-    return Response.json({ errors: [{ message: 'Log in to change the NHL data.' }] }, { status: 401 })
+    return Response.json({ errors: [{ message: `Log in to change ${what}.` }] }, { status: 401 })
   }
 
   let body: unknown
@@ -147,4 +150,4 @@ const routeSeason = (req: PayloadRequest) => {
   return /^\d{4}$/.test(season) ? season : null
 }
 
-const notFound = () => Response.json({ errors: [{ message: 'Not Found' }] }, { status: 404 })
+export const notFound = () => Response.json({ errors: [{ message: 'Not Found' }] }, { status: 404 })
