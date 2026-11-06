@@ -46,6 +46,7 @@ uses to test templates.
 | `src/collections/HockeyMembers.ts`, `src/endpoints/hockeyMembers.ts` | Profiles of the HockeyPoolCap app's accounts (see "The HockeyPoolCap app") |
 | `src/collections/HockeyFantasyTeams.ts`, `src/endpoints/hockeyFantasyTeams.ts` | The fantasy teams those accounts follow in the app |
 | `src/components/NhlData`, `src/nhl`, `src/endpoints/nhlData.ts` | The NHL Data screens: the HockeyPoolCap API's teams, players and stats, read and changed there (see "NHL data") |
+| `src/components/HockeyAccounts`, `src/hockeyAccounts`, `src/endpoints/hockeyAccounts.ts` | The HockeyPoolCap Accounts screens: the Hockolic app's accounts, read and changed in the API (see "HockeyPoolCap accounts") |
 | `src/app/(frontend)/ios-app/`, `scripts/import-legal-pages.ts` | Privacy Policy and Terms of Use of the app and the Vigor website (see "Privacy policy and terms of use") |
 | `src/vigor/`, `src/locales.ts`             | Content of the Vigor website in four languages (see "Vigor website")                   |
 | `scripts/import-vigor.ts`                  | Copies the Vigor website's current content into the CMS (see "Vigor website")          |
@@ -1293,6 +1294,33 @@ collections. They save through `src/endpoints/nhlData.ts`, which only logged-in 
 server's `.env` and as `ADMIN_API_KEY` on the HockeyPoolCap API, with the API's address as `HOCKEY_API_URL` here (e.g.
 `https://hockey.awoz.co`), and redeploy both. It's a different key from `HOCKEY_API_KEY`, which goes the other way (the
 API calling this CMS). Until it's set, the screens say what's missing.
+
+## HockeyPoolCap accounts
+
+The Hockolic app's accounts (sign-in, password, two-step sign-in, passkeys) live in the HockeyPoolCap API's
+PostgreSQL database, with names and emails encrypted there. The **HockeyPoolCap Accounts** group in the sidebar shows
+and changes them through the API's `/api/v1/admin/users` endpoints, with the same key as the NHL Data screens
+(`HOCKEY_API_URL`, `HOCKEY_API_ADMIN_KEY`); none of it is stored in MongoDB:
+
+```
+ HockeyPoolCap Accounts ── logged-in user (2FA) ──► this CMS ── X-API-Key ──► HockeyPoolCap API
+  /admin/hockey-accounts/...                        /api/hockey-accounts/...  /api/v1/admin/users/... → PostgreSQL
+```
+
+- **Accounts** (`/admin/hockey-accounts`): every account, newest first, with its status, two-step sign-in, number of
+  passkeys and last sign-in; search by part of the name or email.
+- **An account** (`/admin/hockey-accounts/:id`):
+  - change the **name** or **email** (the email is what they sign in with; one another account has is refused);
+  - **turn the account off**: they're signed out on every device at once and can't sign in until it's turned on again;
+  - turn **two-step sign-in** off, e.g. when they lost access to their email (only they can turn it on, in the app,
+    since it checks a code sent to their email);
+  - see their **passkeys** and remove one, e.g. from a lost phone;
+  - **sign out everywhere**, and **email a password reset code** (the same as "Forgot password?" in the app);
+  - when they signed up, last signed in and changed their password, and a link to their member (profile and fantasy
+    teams) in HockeyPoolCap App → Members.
+- The password is never shown: the API only keeps a hash of it. Whether an account is an admin of the API comes from
+  `ADMIN_EMAILS` on the API's server and is shown, not changed, here.
+- Every logged-in CMS user can use these screens, as with NHL Data.
 
 ## Two-factor authentication
 

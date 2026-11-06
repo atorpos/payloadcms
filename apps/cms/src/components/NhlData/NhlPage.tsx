@@ -25,6 +25,8 @@ type Props = {
   children: React.ReactNode
   description?: React.ReactNode
   props: AdminViewServerProps
+  /** The sidebar group the screen is in, first in the breadcrumbs */
+  section?: string
   title: string
 }
 
@@ -33,7 +35,7 @@ type Props = {
  * aren't protected by Payload, so it sends visitors who aren't logged in to the login page (src/proxy.ts then asks for
  * the two-factor code).
  */
-export function NhlPage({ breadcrumbs = [], children, description, props, title }: Props) {
+export function NhlPage({ breadcrumbs = [], children, description, props, section = 'NHL Data', title }: Props) {
   const { initPageResult, params, searchParams } = props
   const { locale, permissions, req, visibleEntities } = initPageResult
   const adminRoute = req.payload.config.routes.admin
@@ -59,7 +61,7 @@ export function NhlPage({ breadcrumbs = [], children, description, props, title 
       {/* The admin header's breadcrumbs: NHL Data / Players / Nathan MacKinnon */}
       <SetStepNav
         nav={[
-          { label: 'NHL Data' },
+          { label: section },
           ...breadcrumbs.map((crumb) => ({ label: crumb.label, url: crumb.href })),
           { label: title },
         ]}
@@ -76,10 +78,10 @@ export function NhlPage({ breadcrumbs = [], children, description, props, title 
 }
 
 /** Shown instead of a screen's content when the API can't be read */
-export function NhlLoadError({ message }: { message: string }) {
+export function NhlLoadError({ message, what = 'The NHL data' }: { message: string; what?: string }) {
   return (
     <div className="nhl-data__error" role="alert">
-      <strong>The NHL data can’t be loaded.</strong> {message}
+      <strong>{what} can’t be loaded.</strong> {message}
     </div>
   )
 }

@@ -31,6 +31,9 @@ import { RelationshipFeatureClient as RelationshipFeatureClient_e70f5e05f09f93e0
 import { LLMInstructionsDescription as LLMInstructionsDescription_3817bf644402e67bfe6577f60ef982de } from '@payloadcms/ui'
 import { LLMInstructionsCell as LLMInstructionsCell_ab83ff7e88da8d3530831f296ec4756a } from '@payloadcms/ui/rsc'
 import { NhlNavLinks as NhlNavLinks_f23b31150373cc8526a40f7b043bb318 } from '../../../components/NhlData/NhlNavLinks'
+import { AccountNavLinks as AccountNavLinks_e9210f805669dd91d920a56e7eaf3cd6 } from '../../../components/HockeyAccounts/AccountNavLinks'
+import { HockeyAccountView as HockeyAccountView_2d037f13b23f9ebf128f33083d6b1517 } from '../../../components/HockeyAccounts/HockeyAccountView'
+import { HockeyAccountsView as HockeyAccountsView_d93a3dc14fc130b5baee07553ad13e1a } from '../../../components/HockeyAccounts/HockeyAccountsView'
 import { NhlPlayerView as NhlPlayerView_b21e2873a7f86357431c3046dc9ad3d9 } from '../../../components/NhlData/NhlPlayerView'
 import { NhlPlayersView as NhlPlayersView_abe430ff3bdcf82c54fb2226b443cbe1 } from '../../../components/NhlData/NhlPlayersView'
 import { NhlReviewView as NhlReviewView_f516e4392875fc9872fdfa358d6c0cdc } from '../../../components/NhlData/NhlReviewView'
@@ -82,6 +85,9 @@ export const importMap = {
   "@payloadcms/ui#LLMInstructionsDescription": LLMInstructionsDescription_3817bf644402e67bfe6577f60ef982de,
   "@payloadcms/ui/rsc#LLMInstructionsCell": LLMInstructionsCell_ab83ff7e88da8d3530831f296ec4756a,
   "/components/NhlData/NhlNavLinks#NhlNavLinks": NhlNavLinks_f23b31150373cc8526a40f7b043bb318,
+  "/components/HockeyAccounts/AccountNavLinks#AccountNavLinks": AccountNavLinks_e9210f805669dd91d920a56e7eaf3cd6,
+  "/components/HockeyAccounts/HockeyAccountView#HockeyAccountView": HockeyAccountView_2d037f13b23f9ebf128f33083d6b1517,
+  "/components/HockeyAccounts/HockeyAccountsView#HockeyAccountsView": HockeyAccountsView_d93a3dc14fc130b5baee07553ad13e1a,
   "/components/NhlData/NhlPlayerView#NhlPlayerView": NhlPlayerView_b21e2873a7f86357431c3046dc9ad3d9,
   "/components/NhlData/NhlPlayersView#NhlPlayersView": NhlPlayersView_abe430ff3bdcf82c54fb2226b443cbe1,
   "/components/NhlData/NhlReviewView#NhlReviewView": NhlReviewView_f516e4392875fc9872fdfa358d6c0cdc,
