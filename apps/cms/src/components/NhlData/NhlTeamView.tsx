@@ -2,11 +2,12 @@ import type { AdminViewServerProps } from 'payload'
 
 import React from 'react'
 
-import type { NhlPlayer, NhlTeamAdmin } from '../../nhl/types'
+import type { NhlPlayer, NhlTeamAdmin, TeamCapSummary } from '../../nhl/types'
 
 import { TEAM_FIELD_LABELS } from '../../nhl/fields'
 import { errorMessage, hockeyApi, HockeyApiError } from '../../nhl/hockeyApi'
 import { formatMoney, optionLabel, POSITIONS, ROSTER_STATUSES } from '../../nhl/types'
+import { CapSummaries } from './CapSummaries'
 import { KeptNote } from './KeptNote'
 import { NhlLoadError, NhlPage, nhlURL, segments } from './NhlPage'
 import { TeamForm } from './TeamForm'
@@ -18,15 +19,17 @@ export async function NhlTeamView(props: AdminViewServerProps) {
 
   let team: NhlTeamAdmin | null = null
   let roster: NhlPlayer[] = []
+  let capSummaries: TeamCapSummary[] = []
   let error: null | string = null
 
   if (!/^[A-Z]{2,5}$/.test(abbreviation)) {
     error = `There’s no team ${abbreviation}.`
   } else {
     try {
-      ;[team, roster] = await Promise.all([
+      ;[team, roster, capSummaries] = await Promise.all([
         hockeyApi<NhlTeamAdmin>(`/api/v1/admin/teams/${abbreviation}`),
         hockeyApi<NhlPlayer[]>(`/api/v1/teams/${abbreviation}/roster`),
+        hockeyApi<TeamCapSummary[]>(`/api/v1/admin/cap-summaries?team=${abbreviation}`),
       ])
     } catch (caught) {
       error =
@@ -56,6 +59,14 @@ export async function NhlTeamView(props: AdminViewServerProps) {
         <KeptNote kept={team.keptFields} labels={TEAM_FIELD_LABELS} path={`/teams/${team.abbreviation}`} />
         <TeamForm team={team} />
         {team.externalId && <p className="nhl-data__hint">API Ninjas’ ID: {team.externalId}</p>}
+      </section>
+
+      <section className="nhl-data__section">
+        <h2>Salary cap</h2>
+        <p className="nhl-data__hint">
+          As last worked out from the players’ contracts and stored: the research script does it after each run.
+        </p>
+        <CapSummaries abbreviation={team.abbreviation} summaries={capSummaries} />
       </section>
 
       <section className="nhl-data__section">

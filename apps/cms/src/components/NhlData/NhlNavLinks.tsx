@@ -19,6 +19,7 @@ export function NhlNavLinks() {
   const links = [
     { href: formatAdminURL({ adminRoute, path: '/nhl/teams' }), id: 'nav-nhl-teams', label: 'Teams' },
     { href: formatAdminURL({ adminRoute, path: '/nhl/players' }), id: 'nav-nhl-players', label: 'Players' },
+    { href: formatAdminURL({ adminRoute, path: '/nhl/review' }), id: 'nav-nhl-review', label: 'Review' },
   ]
 
   return (

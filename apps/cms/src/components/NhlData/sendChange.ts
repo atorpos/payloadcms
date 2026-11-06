@@ -17,7 +17,7 @@ export class NhlSaveError extends Error {
 export const sendNhlChange = async <T = unknown>(
   apiRoute: string,
   path: string,
-  method: 'DELETE' | 'PATCH' | 'PUT',
+  method: 'DELETE' | 'PATCH' | 'POST' | 'PUT',
   body?: object,
 ): Promise<null | T> => {
   let response: Response

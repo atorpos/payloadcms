@@ -59,6 +59,9 @@ import {
   hockeyMemberSaveEndpoint,
 } from './endpoints/hockeyMembers'
 import {
+  nhlCapSummariesEndpoint,
+  nhlCareerSaveEndpoint,
+  nhlCareerStatusEndpoint,
   nhlPlayerSaveEndpoint,
   nhlPlayerStatsDeleteEndpoint,
   nhlPlayerStatsSaveEndpoint,
@@ -112,6 +115,11 @@ export default buildConfig({
           Component: '/components/NhlData/NhlPlayersView#NhlPlayersView',
           exact: true,
           path: '/nhl/players',
+        },
+        nhlReview: {
+          Component: '/components/NhlData/NhlReviewView#NhlReviewView',
+          exact: true,
+          path: '/nhl/review',
         },
         nhlTeam: {
           Component: '/components/NhlData/NhlTeamView#NhlTeamView',
@@ -197,6 +205,9 @@ export default buildConfig({
     hockeyMemberDeleteEndpoint,
     hockeyMemberEndpoint,
     hockeyMemberSaveEndpoint,
+    nhlCapSummariesEndpoint,
+    nhlCareerSaveEndpoint,
+    nhlCareerStatusEndpoint,
     nhlPlayerSaveEndpoint,
     nhlPlayerStatsDeleteEndpoint,
     nhlPlayerStatsSaveEndpoint,
