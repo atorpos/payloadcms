@@ -20,6 +20,7 @@ export function NhlNavLinks() {
     { href: formatAdminURL({ adminRoute, path: '/nhl/teams' }), id: 'nav-nhl-teams', label: 'Teams' },
     { href: formatAdminURL({ adminRoute, path: '/nhl/players' }), id: 'nav-nhl-players', label: 'Players' },
     { href: formatAdminURL({ adminRoute, path: '/nhl/review' }), id: 'nav-nhl-review', label: 'Review' },
+    { href: formatAdminURL({ adminRoute, path: '/nhl/import' }), id: 'nav-nhl-import', label: 'Import' },
   ]
 
   return (

@@ -68,6 +68,8 @@ import {
   nhlCapSummariesEndpoint,
   nhlCareerSaveEndpoint,
   nhlCareerStatusEndpoint,
+  nhlImportStartEndpoint,
+  nhlImportStatusEndpoint,
   nhlPlayerSaveEndpoint,
   nhlPlayerStatsDeleteEndpoint,
   nhlPlayerStatsSaveEndpoint,
@@ -128,6 +130,11 @@ export default buildConfig({
         },
         // The NHL data in the HockeyPoolCap API's PostgreSQL database, read and changed through its admin
         // endpoints (src/nhl/hockeyApi.ts); nothing is stored here
+        nhlImport: {
+          Component: '/components/NhlData/NhlImportView#NhlImportView',
+          exact: true,
+          path: '/nhl/import',
+        },
         nhlPlayer: {
           Component: '/components/NhlData/NhlPlayerView#NhlPlayerView',
           exact: true,
@@ -234,6 +241,8 @@ export default buildConfig({
     nhlCapSummariesEndpoint,
     nhlCareerSaveEndpoint,
     nhlCareerStatusEndpoint,
+    nhlImportStartEndpoint,
+    nhlImportStatusEndpoint,
     nhlPlayerSaveEndpoint,
     nhlPlayerStatsDeleteEndpoint,
     nhlPlayerStatsSaveEndpoint,

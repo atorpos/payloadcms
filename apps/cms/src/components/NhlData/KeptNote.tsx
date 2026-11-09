@@ -27,7 +27,7 @@ export function KeptNote({ kept, labels, path }: Props) {
 
   if (kept.length === 0) {
     return (
-      <p className="nhl-data__kept">The daily import from API Ninjas updates every field it has.</p>
+      <p className="nhl-data__kept">The daily import from the NHL updates every field it has.</p>
     )
   }
 
@@ -49,7 +49,7 @@ export function KeptNote({ kept, labels, path }: Props) {
     <div className="nhl-data__kept">
       <p>
         <strong>Kept from the daily import:</strong> {kept.map((field) => labels[field] ?? field).join(', ')}. The
-        import from API Ninjas leaves them as they were set here.
+        import from the NHL leaves them as they were set here.
       </p>
       <Button buttonStyle="secondary" disabled={isSaving} onClick={release} size="medium">
         Let the import update them again

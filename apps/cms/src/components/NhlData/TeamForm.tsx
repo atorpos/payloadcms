@@ -98,7 +98,7 @@ export function TeamForm({ team }: { team: NhlTeamAdmin }) {
 
       <label className="nhl-data__checkbox">
         <input checked={keep} onChange={(event) => setKeep(event.target.checked)} type="checkbox" />
-        Keep my changes from the daily import (otherwise API Ninjas’ values come back tomorrow)
+        Keep my changes from the daily import (otherwise the NHL’s values come back tomorrow)
       </label>
 
       {error && (

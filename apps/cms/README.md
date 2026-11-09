@@ -1264,24 +1264,30 @@ API and save to it, so nothing is copied into this CMS:
   /admin/nhl/...                              /api/nhl-data/...                                /api/v1/admin/... → PostgreSQL
 ```
 
-- **Teams** (`/admin/nhl/teams`): every team; a team's name, city, conference and division, its salary cap this
-  season and next as last worked out (with a button to work it out again), and its players.
-- **Players** (`/admin/nhl/players`): search by name, team, position and roster status; a player's name, position,
-  shoots/catches, number, birth date and country, team, roster status and draft; his **season stats** (add a season,
-  change one, or delete one entered by mistake), which the app's top players and fantasy points come from; and his
-  **career** (below).
+- **Teams** (`/admin/nhl/teams`): every team with its logo; a team's standing this season (record, points, ranks,
+  streak, last ten, home and road), its name, city, conference and division, its salary cap this season and next as
+  last worked out (with a button to work it out again), and its players with their photos.
+- **Players** (`/admin/nhl/players`): search by name, team, position and roster status; a player's photo, birthplace,
+  height, weight and NHL ID (linked to NHL.com); his name, position, shoots/catches, number, birth date and country,
+  team, roster status and draft; his **season stats**, which the app's top players and fantasy points come from; and
+  his **career** (below).
+- **Import** (`/admin/nhl/import`): the import from the NHL's own stats service, which the HockeyPoolCap API runs
+  every day: the standings, each team's roster and prospects, and every player's page (bio, draft, stats for each team
+  and season, awards). Start one now, for every team or one, follow its progress, and see what the last one did and
+  what failed. A full import reads about 1,400 players' pages, so it takes several minutes.
 - **Review** (`/admin/nhl/review`): the players whose career the HockeyPoolCap API's research script found with
   Claude (its `scripts/research`), waiting to be checked; also those verified and those never researched, by team.
-- **Career**, on each player's screen: what the research found, with its sources and what it wasn't sure of. Check it
-  against the sources and correct it: birthplace, height and weight; achievements; transactions (the draft, trades with
-  what each side got, signings...); contracts, with each season's salary, bonuses and clause and the teams that kept
-  part of the cap hit; and his stat line for each team in each season, regular season and playoffs. **Save** replaces
-  the whole career in the API (his contracts included) and adds each season's regular-season lines up into his season
-  stats; **Save and mark verified** also takes him off the Review list. What the API couldn't use (e.g. a team it
-  doesn't know) is listed after saving.
-- **The daily import from API Ninjas** updates names, numbers, teams and the like every morning. What you change here is
-  kept from it ("Kept" next to the field), unless you untick "Keep my changes from the daily import". "Let the import
-  update them again" hands those fields back to API Ninjas. Draft details, stats and contracts are never imported.
+- **Career**, on each player's screen: his stat line for each team in each season (regular season and playoffs) and
+  his awards come from the NHL, marked NHL, and the daily import replaces them. His contracts (with each season's
+  salary, bonuses and clause and the teams that kept part of the cap hit) and transactions (the draft, trades with what
+  each side got, signings...) come from the research script, with its sources and what it wasn't sure of: check them
+  and correct them. Achievements added here (All-Star Games, medals...) stay. **Save** replaces the whole career in
+  the API and adds each season's regular-season lines up into his season stats; **Save and mark verified** also takes
+  him off the Review list. What the API couldn't use (e.g. a team it doesn't know) is listed after saving.
+- **The daily import from the NHL** updates names, numbers, teams, bio, draft, stats and awards every morning. What you
+  change in Details is kept from it ("Kept" next to the field), unless you untick "Keep my changes from the daily
+  import". "Let the import update them again" hands those fields back to the NHL. Contracts and transactions are never
+  imported: they come from the research script.
 - Saving sends only the fields you changed. A field can't be emptied here; to take a player off his team, set his
   roster status to Free agent or Retired.
 

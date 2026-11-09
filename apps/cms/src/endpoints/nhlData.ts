@@ -98,6 +98,38 @@ export const nhlCapSummariesEndpoint: Endpoint = {
   path: '/nhl-data/teams/:abbreviation/cap-summaries',
 }
 
+/** `GET /api/nhl-data/import`: whether an import from the NHL runs, how far it got, and what the last one did */
+export const nhlImportStatusEndpoint: Endpoint = {
+  handler: async (req) => {
+    if (!req.user) {
+      return Response.json({ errors: [{ message: 'Log in to see the import.' }] }, { status: 401 })
+    }
+    try {
+      return Response.json(await hockeyApi<unknown>('/api/v1/admin/import'))
+    } catch (error) {
+      if (error instanceof HockeyApiError) {
+        return Response.json({ errors: [{ message: error.message }] }, { status: error.status })
+      }
+      throw error
+    }
+  },
+  method: 'get',
+  path: '/nhl-data/import',
+}
+
+/** `POST /api/nhl-data/import?team=COL`: starts an import from the NHL (every team without `team`); answers its status */
+export const nhlImportStartEndpoint: Endpoint = {
+  handler: async (req) => {
+    const team = String(req.searchParams?.get('team') ?? '')
+    if (team && !/^[A-Za-z]{2,5}$/.test(team)) {
+      return notFound()
+    }
+    return forward(req, 'POST', `/api/v1/admin/import${team ? `?team=${team.toUpperCase()}` : ''}`, { body: false })
+  },
+  method: 'post',
+  path: '/nhl-data/import',
+}
+
 /**
  * Sends the request's JSON body on to the API and answers what it answered. Also used by the HockeyPoolCap Accounts
  * endpoints (src/endpoints/hockeyAccounts.ts).

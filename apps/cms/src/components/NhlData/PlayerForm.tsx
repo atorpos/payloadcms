@@ -12,7 +12,7 @@ import { keptAfterSave, NhlSaveError, sendNhlChange } from './sendChange'
 type Option = { label: string; value: string }
 
 type Field = {
-  /** The field the import keeps when this one is changed (Player.IMPORTED_FIELDS in the API); none for draft details */
+  /** The field the import keeps when this one is changed (Player.IMPORTED_FIELDS in the API) */
   keptAs?: string
   label: string
   max?: number
@@ -72,10 +72,10 @@ export function PlayerForm({ player, teams }: { player: NhlPlayer & { keptFields
     { keptAs: 'birthCountry', label: 'Birth country', max: 100, name: 'birthCountry', type: 'text' },
     { keptAs: 'team', label: 'Team', name: 'team', options: teams, type: 'select' },
     { keptAs: 'rosterStatus', label: 'Roster status', name: 'rosterStatus', options: ROSTER_STATUSES, type: 'select' },
-    { label: 'Draft year', max: 2100, min: 1960, name: 'draftYear', type: 'number' },
-    { label: 'Draft round', max: 20, min: 1, name: 'draftRound', type: 'number' },
-    { label: 'Draft pick (overall)', max: 400, min: 1, name: 'draftOverall', type: 'number' },
-    { label: 'Drafted by', name: 'draftTeam', options: teams, type: 'select' },
+    { keptAs: 'draft', label: 'Draft year', max: 2100, min: 1960, name: 'draftYear', type: 'number' },
+    { keptAs: 'draft', label: 'Draft round', max: 20, min: 1, name: 'draftRound', type: 'number' },
+    { keptAs: 'draft', label: 'Draft pick (overall)', max: 400, min: 1, name: 'draftOverall', type: 'number' },
+    { keptAs: 'draft', label: 'Drafted by', name: 'draftTeam', options: teams, type: 'select' },
   ]
 
   const initial = Object.fromEntries(fields.map((field) => [field.name, formValue(player, field.name)]))
@@ -187,8 +187,7 @@ export function PlayerForm({ player, teams }: { player: NhlPlayer & { keptFields
 
       <label className="nhl-data__checkbox">
         <input checked={keep} onChange={(event) => setKeep(event.target.checked)} type="checkbox" />
-        Keep my changes from the daily import (otherwise API Ninjas’ values come back tomorrow). Draft details are
-        never imported.
+        Keep my changes from the daily import (otherwise the NHL’s values come back tomorrow)
       </label>
 
       {error && (

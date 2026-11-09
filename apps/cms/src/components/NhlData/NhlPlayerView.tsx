@@ -62,9 +62,49 @@ export async function NhlPlayerView(props: AdminViewServerProps) {
 
   return (
     <NhlPage breadcrumbs={breadcrumbs} description={description} props={props} title={player.fullName}>
+      <div className="nhl-data__profile">
+        {player.headshotUrl && (
+          // eslint-disable-next-line @next/next/no-img-element -- the NHL's photo, as it is
+          <img alt={player.fullName} className="nhl-data__headshot" height={120} src={player.headshotUrl} width={120} />
+        )}
+        <dl>
+          <dt>Born</dt>
+          <dd>
+            {[player.birthDate, player.birthPlace ?? player.birthCountry].filter(Boolean).join(' · ') || '—'}
+          </dd>
+          <dt>Height / weight</dt>
+          <dd>
+            {player.heightCm ? `${player.heightCm} cm` : '—'} / {player.weightKg ? `${player.weightKg} kg` : '—'}
+          </dd>
+          <dt>Draft</dt>
+          <dd>
+            {player.draft?.year
+              ? [
+                  player.draft.year,
+                  player.draft.round ? `round ${player.draft.round}` : null,
+                  player.draft.overall ? `#${player.draft.overall} overall` : null,
+                  player.draft.team?.abbreviation ? `by ${player.draft.team.abbreviation}` : null,
+                ]
+                  .filter(Boolean)
+                  .join(', ')
+              : 'Undrafted, or not known'}
+          </dd>
+          <dt>NHL ID</dt>
+          <dd>
+            {player.nhlId ? (
+              <a href={`https://www.nhl.com/player/${player.nhlId}`} rel="noreferrer" target="_blank">
+                {player.nhlId} on NHL.com
+              </a>
+            ) : (
+              'Not found at the NHL yet'
+            )}
+          </dd>
+        </dl>
+      </div>
+
       <section className="nhl-data__section">
         <h2>Details</h2>
-        {detail.externalId ? (
+        {player.nhlId || detail.externalId ? (
           <KeptNote kept={detail.keptFields} labels={PLAYER_FIELD_LABELS} path={`/players/${player.id}`} />
         ) : (
           <p className="nhl-data__kept">Added by hand: the daily import never changes him.</p>
@@ -82,15 +122,16 @@ export async function NhlPlayerView(props: AdminViewServerProps) {
         {hasStatLines ? (
           <>
             <p className="nhl-data__hint">
-              Added up from his regular-season lines in Career below (one per team): change those, and these follow
-              when the career is saved. The app’s top players lists and fantasy points come from them.
+              Added up from his regular-season lines in Career below (one per team), which the daily import brings
+              from the NHL. The app’s top players lists and fantasy points come from them.
             </p>
             <SeasonTotals isGoalie={player.position === 'G'} stats={stats} />
           </>
         ) : (
           <>
             <p className="nhl-data__hint">
-              Entered by hand (API Ninjas has none). The app’s top players lists and fantasy points come from them.
+              Entered by hand: the NHL has no NHL games for him yet. The app’s top players lists and fantasy points come
+              from them.
             </p>
             <StatsEditor currentSeason={currentSeason()} isGoalie={player.position === 'G'} playerID={player.id} stats={stats} />
           </>
@@ -100,8 +141,9 @@ export async function NhlPlayerView(props: AdminViewServerProps) {
       <section className="nhl-data__section" id="career">
         <h2>Career</h2>
         <p className="nhl-data__hint">
-          His whole career, as the research script found it with Claude: check it against the sources, correct what’s
-          wrong, and mark it verified. Saving replaces it all in the HockeyPoolCap API, his contracts included.
+          His stats and awards come from the NHL (marked NHL), and the daily import replaces them. His contracts and
+          transactions come from the research script, with Claude: check them against the sources, correct what’s
+          wrong, and mark them verified. Saving replaces it all in the HockeyPoolCap API.
         </p>
         <CareerEditor currentSeason={currentSeason()} initial={career} isGoalie={player.position === 'G'} />
       </section>
@@ -109,10 +151,16 @@ export async function NhlPlayerView(props: AdminViewServerProps) {
       <section className="nhl-data__section nhl-data__source">
         <h2>Source</h2>
         <dl>
-          <dt>API Ninjas’ ID</dt>
-          <dd>{detail.externalId ?? 'None: added by hand'}</dd>
-          <dt>Roster status, as API Ninjas wrote it</dt>
+          <dt>NHL ID</dt>
+          <dd>{player.nhlId ?? 'None: not found on an NHL roster or prospect list'}</dd>
+          <dt>Last found on</dt>
           <dd>{detail.sourceRosterStatus ?? '—'}</dd>
+          {detail.externalId && (
+            <>
+              <dt>API Ninjas’ ID (the import before the NHL’s)</dt>
+              <dd>{detail.externalId}</dd>
+            </>
+          )}
           <dt>Last imported</dt>
           <dd>{detail.lastImportedAt ? new Date(detail.lastImportedAt).toUTCString() : 'Never'}</dd>
           <dt>Last changed</dt>
