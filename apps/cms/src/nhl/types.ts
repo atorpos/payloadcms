@@ -8,15 +8,48 @@ export type NhlTeamRef = { abbreviation: string; name?: null | string }
 export type NhlTeam = {
   abbreviation: string
   city?: null | string
+  /** The NHL's short name, e.g. Avalanche */
+  commonName?: null | string
   conference?: null | string
   division?: null | string
   id: number
+  /** The NHL's logo (SVG) for dark backgrounds */
+  logoDarkUrl?: null | string
+  /** The NHL's logo (SVG) for light backgrounds */
+  logoUrl?: null | string
   name: string
+  /** e.g. Colorado */
+  placeName?: null | string
+}
+
+/** `GET /api/v1/teams/{team}/stats`: its record in a season; the standing fields come from the NHL's standings */
+export type NhlTeamStats = {
+  conferenceRank?: null | number
+  divisionRank?: null | number
+  gamesPlayed: number
+  goalsAgainst?: null | number
+  goalsFor?: null | number
+  homeRecord?: null | string
+  /** Wins-losses-OT losses in the last ten games, e.g. 5-4-1 */
+  lastTen?: null | string
+  leagueRank?: null | number
+  losses: number
+  overtimeLosses: number
+  pointPercentage?: null | number
+  points: number
+  regulationWins?: null | number
+  roadRecord?: null | string
+  season: number
+  seasonLabel: string
+  /** e.g. W3: three wins in a row */
+  streak?: null | string
+  updatedAt?: null | string
+  wins: number
 }
 
 /** `GET /api/v1/admin/teams/{team}` */
 export type NhlTeamAdmin = {
-  /** API Ninjas' team_id, e.g. nhl-tor */
+  /** API Ninjas' team_id, from the import before the NHL's */
   externalId?: null | string
   /** The fields the daily import leaves as an admin set them */
   keptFields: string[]
@@ -24,6 +57,13 @@ export type NhlTeamAdmin = {
 
 export type NhlPlayer = {
   birthCountry?: null | string
+  /** e.g. Halifax, Nova Scotia, CAN */
+  birthPlace?: null | string
+  headshotUrl?: null | string
+  heightCm?: null | number
+  /** The NHL's player ID, e.g. 8477492; null for a player the NHL import hasn't found */
+  nhlId?: null | number
+  weightKg?: null | number
   /** e.g. "1997-09-17" */
   birthDate?: null | string
   /** This season's cap hit, in US dollars */
@@ -79,7 +119,7 @@ export type NhlContract = {
 /** `GET /api/v1/admin/players/{id}` */
 export type NhlPlayerAdmin = {
   contracts: NhlContract[]
-  /** API Ninjas' player_id; null for a player added by hand */
+  /** API Ninjas' player_id, from the import before the NHL's */
   externalId?: null | string
   keptFields: string[]
   lastImportedAt?: null | string
@@ -151,7 +191,10 @@ export type CareerBio = {
   weightKg: null | number
 }
 
-export type CareerAchievement = { detail: null | string; season: null | number; title: string }
+/** Where it came from: NHL (the daily import replaces these) or RESEARCH (the research script, or someone here) */
+export type CareerSource = 'NHL' | 'RESEARCH'
+
+export type CareerAchievement = { detail: null | string; season: null | number; source?: CareerSource; title: string }
 
 export type TransactionType = 'BUYOUT' | 'DRAFT' | 'OTHER' | 'RELEASE' | 'SIGNING' | 'TRADE' | 'WAIVER_CLAIM'
 
@@ -210,8 +253,38 @@ export type CareerStatLine = {
   savePercentage: null | number
   season: number
   shutouts: null | number
+  source?: CareerSource
   team: string
   wins: null | number
+}
+
+/** `GET /api/v1/admin/import`: whether an import from the NHL runs, how far it got, and what the last one did */
+export type NhlImportStatus = {
+  lastResult?: NhlImportResult | null
+  phase?: null | string
+  playersDone: number
+  playersTotal: number
+  running: boolean
+  startedAt?: null | string
+  team?: null | string
+}
+
+export type NhlImportResult = {
+  awards: number
+  errors: string[]
+  finishedAt: string
+  playerPagesRead: number
+  playersCreated: number
+  playersFailed: number
+  playersMatched: number
+  playersMissing: number
+  playersSkipped: number
+  playersUpdated: number
+  startedAt: string
+  statLines: number
+  team?: null | string
+  teamsCreated: number
+  teamsUpdated: number
 }
 
 export type Career = {

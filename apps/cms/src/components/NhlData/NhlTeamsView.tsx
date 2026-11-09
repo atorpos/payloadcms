@@ -40,6 +40,9 @@ export async function NhlTeamsView(props: AdminViewServerProps) {
             <table className="nhl-data__table">
               <thead>
                 <tr>
+                  <th>
+                    <span className="nhl-data__sr-only">Logo</span>
+                  </th>
                   <th>Team</th>
                   <th>Abbreviation</th>
                   <th>City</th>
@@ -50,6 +53,19 @@ export async function NhlTeamsView(props: AdminViewServerProps) {
               <tbody>
                 {sorted.map((team) => (
                   <tr key={team.abbreviation}>
+                    <td className="nhl-data__photo-cell">
+                      {team.logoUrl && (
+                        // eslint-disable-next-line @next/next/no-img-element -- the NHL's SVG, as it is
+                        <img
+                          alt=""
+                          className="nhl-data__logo"
+                          height={32}
+                          loading="lazy"
+                          src={team.logoUrl}
+                          width={32}
+                        />
+                      )}
+                    </td>
                     <td>
                       <a href={nhlURL(props, `/teams/${team.abbreviation}`)}>{team.name}</a>
                     </td>
@@ -64,7 +80,7 @@ export async function NhlTeamsView(props: AdminViewServerProps) {
           </div>
           {teams.length === 0 && (
             <p className="nhl-data__empty">
-              No teams yet: they arrive with the API’s import from API Ninjas (POST /api/v1/admin/import).
+              No teams yet: they arrive with the import from the NHL (NHL Data → Import).
             </p>
           )}
         </>

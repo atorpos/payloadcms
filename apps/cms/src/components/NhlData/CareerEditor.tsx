@@ -113,7 +113,8 @@ export function CareerEditor({ currentSeason, initial, isGoalie }: Props) {
       <details className="nhl-data__panel" open>
         <summary>Bio</summary>
         <p className="nhl-data__hint">
-          Birth date, position, shoots and draft are changed in Details above; these are only kept here.
+          From the NHL: the daily import sets them again. Birth date, position, shoots and draft are changed in Details
+          above.
         </p>
         <div className="nhl-data__grid">
           <div className="nhl-data__field">
@@ -139,6 +140,10 @@ export function CareerEditor({ currentSeason, initial, isGoalie }: Props) {
 
       <details className="nhl-data__panel" open>
         <summary>Achievements · {career.achievements.length}</summary>
+        <p className="nhl-data__hint">
+          Awards marked NHL come from the NHL, and the daily import replaces them. Add the others here (All-Star Games,
+          international medals...): the import leaves those.
+        </p>
         <div className="nhl-data__table-wrap">
           <table className="nhl-data__table nhl-data__table--edit">
             <thead>
@@ -146,6 +151,7 @@ export function CareerEditor({ currentSeason, initial, isGoalie }: Props) {
                 <th>Season</th>
                 <th>Title</th>
                 <th>Detail</th>
+                <th>From</th>
                 <th />
               </tr>
             </thead>
@@ -177,6 +183,11 @@ export function CareerEditor({ currentSeason, initial, isGoalie }: Props) {
                     />
                   </td>
                   <td>
+                    <span className={`nhl-data__status nhl-data__status--${achievement.source === 'NHL' ? 'verified' : 'none'}`}>
+                      {achievement.source === 'NHL' ? 'NHL' : 'Research'}
+                    </span>
+                  </td>
+                  <td>
                     <RemoveButton label="Remove achievement" onClick={() => set({ achievements: removeAt(career.achievements, index) })} />
                   </td>
                 </tr>
@@ -184,7 +195,11 @@ export function CareerEditor({ currentSeason, initial, isGoalie }: Props) {
             </tbody>
           </table>
         </div>
-        <AddButton onClick={() => set({ achievements: [...career.achievements, { detail: null, season: null, title: '' }] })}>
+        <AddButton
+          onClick={() =>
+            set({ achievements: [...career.achievements, { detail: null, season: null, source: 'RESEARCH', title: '' }] })
+          }
+        >
           Add an achievement
         </AddButton>
       </details>
@@ -275,6 +290,9 @@ export function CareerEditor({ currentSeason, initial, isGoalie }: Props) {
           </summary>
           {gameType === 'REGULAR' && (
             <p className="nhl-data__hint">
+              {career.stats.some((line) => line.source === 'NHL')
+                ? 'From the NHL: the daily import replaces these, so a correction here lasts until it runs. '
+                : ''}
               One line per team per season. Saving adds a season’s lines up into his season stats, which the app’s top
               players and fantasy points use.
             </p>
