@@ -159,11 +159,11 @@ export const ROSTER_STATUSES = [
 export const optionLabel = (options: { label: string; value: string }[], value?: null | string) =>
   options.find((option) => option.value === value)?.label ?? value ?? '—'
 
-/** e.g. "$12.50M" */
+/** e.g. "$12.50M", "-$1.50M" */
 export const formatMoney = (dollars?: null | number) =>
   dollars === null || dollars === undefined
     ? '—'
-    : `$${(dollars / 1_000_000).toLocaleString('en-US', { maximumFractionDigits: 2, minimumFractionDigits: 2 })}M`
+    : `${dollars < 0 ? '-' : ''}$${(Math.abs(dollars) / 1_000_000).toLocaleString('en-US', { maximumFractionDigits: 2, minimumFractionDigits: 2 })}M`
 
 /** The season whose cap year today is in: 2026 from July 1, 2026 to June 30, 2027, as the API counts */
 export const currentSeason = (now = new Date()) =>
@@ -321,8 +321,57 @@ export type TeamCapSummary = {
   contractLimit: number
   contracts: number
   ltirCapHit: number
+  /** Ceiling + LTIR relief - cap hit: the room the team really has (missing from an API before injuries) */
+  capSpaceWithLtir?: null | number
+  /** How far over the cap its players on LTIR let it go; 0 in seasons after this one */
+  ltirRelief?: number
   season: number
   seasonLabel: string
+  team: NhlTeamRef
+}
+
+export type InjuryStatus = 'DAY_TO_DAY' | 'INJURED_RESERVE' | 'LONG_TERM_INJURED_RESERVE' | 'OUT'
+
+export const INJURY_STATUSES: { label: string; value: InjuryStatus }[] = [
+  { label: 'Day to day', value: 'DAY_TO_DAY' },
+  { label: 'Out', value: 'OUT' },
+  { label: 'Injured reserve', value: 'INJURED_RESERVE' },
+  { label: 'Long-term injured reserve', value: 'LONG_TERM_INJURED_RESERVE' },
+]
+
+/** What `PUT /api/v1/admin/players/:id/injury` takes */
+export type InjuryInput = {
+  /** LTIR only: the team's cap space when he was put on it; null when unknown (its cap space now is used) */
+  capRoomAtPlacement: null | number
+  expectedReturn: null | string
+  /** YYYY-MM-DD */
+  injuredOn: null | string
+  injury: null | string
+  notes: null | string
+  /** When he was put on IR or LTIR, YYYY-MM-DD */
+  placedOn: null | string
+  status: InjuryStatus
+}
+
+/** One player's injury, as `GET /api/v1/teams/:team/injuries` lists them */
+export type NhlInjury = {
+  fullName: string
+  playerId: number
+  position?: null | string
+  rosterStatus?: null | string
+  source: 'ADMIN' | 'RESEARCH'
+  updatedAt: string
+} & InjuryInput
+
+/** `GET /api/v1/teams/:team/injuries`: the team's injured players and its last injury report */
+export type TeamInjuries = {
+  injuries: NhlInjury[]
+  ltirCapHit: number
+  ltirRelief: number
+  model?: null | string
+  notes?: null | string
+  reportedAt?: null | string
+  sources: string[]
   team: NhlTeamRef
 }
 

@@ -44,6 +44,8 @@ export function CapSummaries({ abbreviation, summaries }: { abbreviation: string
                 <th className="nhl-data__number">Cap hit</th>
                 <th className="nhl-data__number">Cap space</th>
                 <th className="nhl-data__number">On LTIR</th>
+                <th className="nhl-data__number">LTIR relief</th>
+                <th className="nhl-data__number">Cap space with LTIR</th>
                 <th className="nhl-data__number">Contracts</th>
                 <th>Calculated</th>
               </tr>
@@ -60,6 +62,12 @@ export function CapSummaries({ abbreviation, summaries }: { abbreviation: string
                     {formatMoney(summary.capSpace)}
                   </td>
                   <td className="nhl-data__number">{formatMoney(summary.ltirCapHit)}</td>
+                  <td className="nhl-data__number">{formatMoney(summary.ltirRelief)}</td>
+                  <td
+                    className={`nhl-data__number${(summary.capSpaceWithLtir ?? 0) < 0 ? ' nhl-data__over' : ''}`}
+                  >
+                    {formatMoney(summary.capSpaceWithLtir)}
+                  </td>
                   <td className="nhl-data__number">
                     {summary.contracts} / {summary.contractLimit}
                   </td>
