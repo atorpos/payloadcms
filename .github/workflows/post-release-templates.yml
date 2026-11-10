@@ -18,7 +18,7 @@ jobs:
       target_branch: ${{ steps.determine_tag.outputs.target_branch }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           fetch-depth: 0
           sparse-checkout: .github/workflows
@@ -71,7 +71,7 @@ jobs:
       has_changes: ${{ steps.patch.outputs.has_changes }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           ref: ${{ needs.wait_for_release.outputs.target_branch }}
 
@@ -130,9 +130,10 @@ jobs:
     needs: [wait_for_release, update_templates]
     if: needs.update_templates.outputs.has_changes == 'true'
     runs-on: ubuntu-26.04
-    environment: templates
+    environment: release
     permissions:
       contents: read
+      pull-requests: write
     steps:
       - name: Mint App token
         id: app-token
@@ -142,7 +143,7 @@ jobs:
           private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
 
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           ref: ${{ needs.wait_for_release.outputs.target_branch }}
           token: ${{ steps.app-token.outputs.token }}
@@ -185,6 +186,13 @@ jobs:
             🤖 Automated bump of templates for ${{ needs.wait_for_release.outputs.release_tag }}
 
             Triggered by user: @${{ github.actor }}
+
+      - name: Approve pull request
+        if: steps.cpr.outputs.pull-request-number != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ steps.cpr.outputs.pull-request-number }}
+        run: gh pr review "$PR_NUMBER" --approve --repo "$GITHUB_REPOSITORY"
 
       - name: Enable auto-merge
         if: steps.cpr.outputs.pull-request-number != ''

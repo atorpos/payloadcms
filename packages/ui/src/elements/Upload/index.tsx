@@ -24,6 +24,7 @@ import { FileDetails } from '../FileDetails/index.js'
 import { PreviewSizes } from '../PreviewSizes/index.js'
 import { Thumbnail } from '../Thumbnail/index.js'
 import { getEditorFileSrc } from './getEditorFileSrc.js'
+import { getInitialCrop } from './getInitialCrop.js'
 import { pasteURLDrawerSlug, UploadFromURLModal } from './UploadFromURLModal/index.js'
 import { usePasteFromClipboard } from './usePasteFromClipboard.js'
 import { useUploadFromUrl } from './useUploadFromUrl.js'
@@ -331,11 +332,13 @@ const UploadComponent: React.FC<UploadComponentProps> = (props) => {
             fileName={value?.name || data?.filename}
             fileSrc={getEditorFileSrc({ data, fileSrc, hasSelectedFile: Boolean(value) })}
             imageCacheTag={imageCacheTag}
-            initialCrop={uploadEdits?.crop ?? undefined}
+            initialCrop={getInitialCrop({ data, hasSelectedFile: Boolean(value), uploadEdits })}
             initialFocalPoint={{
               x: uploadEdits?.focalPoint?.x || data?.focalX || 50,
               y: uploadEdits?.focalPoint?.y || data?.focalY || 50,
             }}
+            // The editor keeps its crop in state, so it starts again for each new file.
+            key={value ? `${value.name}-${value.lastModified}` : data?.filename}
             onSave={onEditsSave}
             showCrop={showCrop}
             showFocalPoint={showFocalPoint}
@@ -411,6 +414,7 @@ const UploadComponent: React.FC<UploadComponentProps> = (props) => {
                   />
                   <span className={`${baseClass}__orText`}>{t('general:or')}</span>
                   <Button
+                    aria-label={t('upload:pasteURL')}
                     buttonStyle="pill"
                     className={`${baseClass}__pasteFromClipboard`}
                     icon="clipboard"
@@ -430,6 +434,7 @@ const UploadComponent: React.FC<UploadComponentProps> = (props) => {
           {value && fileSrc && (
             <React.Fragment>
               <Button
+                aria-label={t('general:cancel')}
                 buttonStyle="ghost"
                 className={`${baseClass}__remove`}
                 icon="x"
