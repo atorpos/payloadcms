@@ -37,7 +37,7 @@ export async function HockeyAccountView(props: AdminViewServerProps) {
   }
 
   if (account) {
-    // Their profile and fantasy teams are kept here, in the Members collection
+    // Their profile and fantasy league are kept here, under their member
     const { req } = props.initPageResult
     const member = await req.payload
       .find({
@@ -108,7 +108,7 @@ export async function HockeyAccountView(props: AdminViewServerProps) {
                   {account.admin ? 'Yes: may change the NHL data in the app’s API.' : 'No.'}{' '}
                   <span className="nhl-data__hint">Set by ADMIN_EMAILS on the API’s server.</span>
                 </dd>
-                <dt>Profile and fantasy teams</dt>
+                <dt>Profile and fantasy league</dt>
                 <dd>
                   {memberHref ? (
                     <a href={memberHref}>Open their member in HockeyPoolCap App → Members</a>

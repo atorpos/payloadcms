@@ -138,6 +138,7 @@ export type LexicalNodes_04AF6417 =
       | 'market-prices'
       | 'push-notifications'
       | 'hockey-members'
+      | 'hockey-fantasy-leagues'
       | 'hockey-fantasy-teams'
       | 'vigor-products'
       | 'vigor-services'
@@ -188,6 +189,7 @@ export interface Config {
     'market-prices': MarketPrice;
     'push-notifications': PushNotification;
     'hockey-members': HockeyMember;
+    'hockey-fantasy-leagues': HockeyFantasyLeague;
     'hockey-fantasy-teams': HockeyFantasyTeam;
     'vigor-products': VigorProduct;
     'vigor-services': VigorService;
@@ -214,6 +216,7 @@ export interface Config {
       prices: 'market-prices';
     };
     'hockey-members': {
+      fantasyLeague: 'hockey-fantasy-leagues';
       fantasyTeams: 'hockey-fantasy-teams';
     };
   };
@@ -234,6 +237,7 @@ export interface Config {
     'market-prices': MarketPricesSelect<false> | MarketPricesSelect<true>;
     'push-notifications': PushNotificationsSelect<false> | PushNotificationsSelect<true>;
     'hockey-members': HockeyMembersSelect<false> | HockeyMembersSelect<true>;
+    'hockey-fantasy-leagues': HockeyFantasyLeaguesSelect<false> | HockeyFantasyLeaguesSelect<true>;
     'hockey-fantasy-teams': HockeyFantasyTeamsSelect<false> | HockeyFantasyTeamsSelect<true>;
     'vigor-products': VigorProductsSelect<false> | VigorProductsSelect<true>;
     'vigor-services': VigorServicesSelect<false> | VigorServicesSelect<true>;
@@ -1286,7 +1290,15 @@ export interface HockeyMember {
    */
   notes?: string | null;
   /**
-   * The fantasy teams they follow in the app, saved to their account.
+   * The fantasy league they set up in the app, with their team and the teams they play against.
+   */
+  fantasyLeague?: {
+    docs?: (string | HockeyFantasyLeague)[];
+    hasNextPage?: boolean;
+    totalDocs?: number;
+  };
+  /**
+   * Their fantasy teams from before the app had leagues.
    */
   fantasyTeams?: {
     docs?: (string | HockeyFantasyTeam)[];
@@ -1309,7 +1321,72 @@ export interface HockeyMember {
   createdAt: string;
 }
 /**
- * Fantasy teams people follow in the HockeyPoolCap app, saved to their account. What you change here shows in the app.
+ * The fantasy league each person sets up in the HockeyPoolCap app: its teams, with theirs marked as theirs. What you change here shows in the app.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "hockey-fantasy-leagues".
+ */
+export interface HockeyFantasyLeague {
+  id: string;
+  /**
+   * e.g. Office pool
+   */
+  name: string;
+  /**
+   * Every team in the league: theirs (checked "Their team") and the ones they play against, in the order they were added.
+   */
+  teams?:
+    | {
+        name: string;
+        /**
+         * Who runs it, for the teams they play against
+         */
+        manager?: string | null;
+        /**
+         * Their own team. Only one.
+         */
+        mine?: boolean | null;
+        /**
+         * In the order they were picked. Name, position and team are as they were then; the app shows them fresh, with their points.
+         */
+        players?:
+          | {
+              fullName?: string | null;
+              /**
+               * C, LW, RW, D or G
+               */
+              position?: string | null;
+              /**
+               * NHL team abbreviation, e.g. COL
+               */
+              team?: string | null;
+              /**
+               * The player in the HockeyPoolCap API
+               */
+              playerId: number;
+              id?: string | null;
+            }[]
+          | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Whose league it is. Set by the app.
+   */
+  member: string | HockeyMember;
+  createdBy?: {
+    relationTo: 'users';
+    value: string | User;
+  } | null;
+  updatedBy?: {
+    relationTo: 'users';
+    value: string | User;
+  } | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Fantasy teams from before the HockeyPoolCap app had leagues, saved to people's accounts. The app offers to move them into their league (Fantasy Leagues); older versions of the app still show them.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "hockey-fantasy-teams".
@@ -1729,6 +1806,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'hockey-members';
         value: string | HockeyMember;
+      } | null)
+    | ({
+        relationTo: 'hockey-fantasy-leagues';
+        value: string | HockeyFantasyLeague;
       } | null)
     | ({
         relationTo: 'hockey-fantasy-teams';
@@ -2376,8 +2457,38 @@ export interface HockeyMembersSelect<T extends boolean = true> {
         country?: T;
       };
   notes?: T;
+  fantasyLeague?: T;
   fantasyTeams?: T;
   appUserId?: T;
+  createdBy?: T;
+  updatedBy?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "hockey-fantasy-leagues_select".
+ */
+export interface HockeyFantasyLeaguesSelect<T extends boolean = true> {
+  name?: T;
+  teams?:
+    | T
+    | {
+        name?: T;
+        manager?: T;
+        mine?: T;
+        players?:
+          | T
+          | {
+              fullName?: T;
+              position?: T;
+              team?: T;
+              playerId?: T;
+              id?: T;
+            };
+        id?: T;
+      };
+  member?: T;
   createdBy?: T;
   updatedBy?: T;
   updatedAt?: T;
@@ -3980,6 +4091,7 @@ export interface CollectionQueryWidget {
       | 'market-prices'
       | 'push-notifications'
       | 'hockey-members'
+      | 'hockey-fantasy-leagues'
       | 'hockey-fantasy-teams'
       | 'vigor-products'
       | 'vigor-services'
@@ -4024,6 +4136,7 @@ export interface ActivityWidget {
           | 'market-prices'
           | 'push-notifications'
           | 'hockey-members'
+          | 'hockey-fantasy-leagues'
           | 'hockey-fantasy-teams'
           | 'vigor-products'
           | 'vigor-services'

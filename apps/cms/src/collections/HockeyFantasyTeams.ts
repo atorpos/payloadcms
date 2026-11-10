@@ -1,10 +1,13 @@
 import type { CollectionConfig } from 'payload'
 
 import { loggedIn } from '../access/loggedIn'
+import { fantasyPlayersField } from './HockeyFantasyLeagues'
 
 /**
- * The fantasy teams people follow in the HockeyPoolCap app (the NHL players they picked in their league), saved to
- * their account. Each belongs to the member of that account and shows on it (src/collections/HockeyMembers.ts).
+ * The fantasy teams people followed in the HockeyPoolCap app before it had leagues (the NHL players they picked in
+ * their league), saved to their account. Each belongs to the member of that account and shows on it
+ * (src/collections/HockeyMembers.ts). The app now keeps one league per account, with its teams in it
+ * (src/collections/HockeyFantasyLeagues.ts), and offers to move these into it; older versions of the app still use them.
  *
  * The app's backend, the HockeyPoolCap API, saves them through src/endpoints/hockeyFantasyTeams.ts and adds the
  * players' points from its stats. People without an account keep their teams on the phone instead, never here.
@@ -22,7 +25,7 @@ export const HockeyFantasyTeams: CollectionConfig = {
   admin: {
     defaultColumns: ['name', 'league', 'member', 'updatedAt'],
     description:
-      'Fantasy teams people follow in the HockeyPoolCap app, saved to their account. What you change here shows in the app.',
+      "Fantasy teams from before the HockeyPoolCap app had leagues, saved to people's accounts. The app offers to move them into their league (Fantasy Leagues); older versions of the app still show them.",
     group: 'HockeyPoolCap App',
     listSearchableFields: ['name', 'league'],
     useAsTitle: 'name',
@@ -55,56 +58,7 @@ export const HockeyFantasyTeams: CollectionConfig = {
         },
       ],
     },
-    {
-      name: 'players',
-      type: 'array',
-      admin: {
-        description:
-          'In the order they were picked. Name, position and team are as they were then; the app shows them fresh, with their points.',
-      },
-      fields: [
-        {
-          type: 'row',
-          fields: [
-            {
-              name: 'fullName',
-              type: 'text',
-              maxLength: 100,
-            },
-            {
-              name: 'position',
-              type: 'text',
-              admin: {
-                description: 'C, LW, RW, D or G',
-              },
-              maxLength: 5,
-            },
-            {
-              name: 'team',
-              type: 'text',
-              admin: {
-                description: 'NHL team abbreviation, e.g. COL',
-              },
-              maxLength: 5,
-            },
-            {
-              name: 'playerId',
-              type: 'number',
-              admin: {
-                description: 'The player in the HockeyPoolCap API',
-              },
-              min: 1,
-              required: true,
-            },
-          ],
-        },
-      ],
-      labels: {
-        plural: 'Players',
-        singular: 'Player',
-      },
-      maxRows: 40,
-    },
+    fantasyPlayersField(),
     {
       name: 'member',
       type: 'relationship',
