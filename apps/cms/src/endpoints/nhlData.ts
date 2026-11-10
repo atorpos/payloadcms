@@ -83,6 +83,31 @@ export const nhlCareerStatusEndpoint: Endpoint = {
   path: '/nhl-data/players/:id/career/status',
 }
 
+/**
+ * `PUT /api/nhl-data/players/:id/injury`: `{ status, injury, injuredOn, placedOn, expectedReturn, capRoomAtPlacement,
+ * notes }`, his injury now. Injured reserve and LTIR set his roster status, and his team's cap is worked out again.
+ */
+export const nhlInjurySaveEndpoint: Endpoint = {
+  handler: async (req) => {
+    const id = playerID(req)
+
+    return id ? forward(req, 'PUT', `/api/v1/admin/players/${id}/injury`) : notFound()
+  },
+  method: 'put',
+  path: '/nhl-data/players/:id/injury',
+}
+
+/** `DELETE /api/nhl-data/players/:id/injury`: he's healthy, and off injured reserve; `204` */
+export const nhlInjuryClearEndpoint: Endpoint = {
+  handler: async (req) => {
+    const id = playerID(req)
+
+    return id ? forward(req, 'DELETE', `/api/v1/admin/players/${id}/injury`) : notFound()
+  },
+  method: 'delete',
+  path: '/nhl-data/players/:id/injury',
+}
+
 /** `POST /api/nhl-data/teams/:abbreviation/cap-summaries`: works out and stores the team's cap this season and next */
 export const nhlCapSummariesEndpoint: Endpoint = {
   handler: async (req) => {

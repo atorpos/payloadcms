@@ -316,6 +316,29 @@
   background: var(--color-bg-secondary);
 }
 
+/* Injuries: the longer he's out, the stronger the color */
+.nhl-data__status--day_to_day {
+  color: var(--color-text-secondary);
+  background: var(--color-bg-secondary);
+}
+
+.nhl-data__status--out,
+.nhl-data__status--injured_reserve {
+  color: var(--color-text-warning, #92400e);
+  background: var(--color-bg-warning-tertiary, #fef3c7);
+}
+
+.nhl-data__status--long_term_injured_reserve {
+  color: var(--color-text-danger, #b91c1c);
+  background: var(--color-bg-danger-tertiary, #fee2e2);
+}
+
+.nhl-data__injuries {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacer-3);
+}
+
 .nhl-data__career {
   display: flex;
   flex-direction: column;

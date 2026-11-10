@@ -2,12 +2,13 @@ import type { AdminViewServerProps } from 'payload'
 
 import React from 'react'
 
-import type { NhlPlayer, NhlTeamAdmin, NhlTeamStats, TeamCapSummary } from '../../nhl/types'
+import type { NhlPlayer, NhlTeamAdmin, NhlTeamStats, TeamCapSummary, TeamInjuries } from '../../nhl/types'
 
 import { TEAM_FIELD_LABELS } from '../../nhl/fields'
 import { errorMessage, hockeyApi, HockeyApiError } from '../../nhl/hockeyApi'
 import { formatMoney, optionLabel, POSITIONS, ROSTER_STATUSES } from '../../nhl/types'
 import { CapSummaries } from './CapSummaries'
+import { InjuriesPanel } from './InjuriesPanel'
 import { KeptNote } from './KeptNote'
 import { NhlLoadError, NhlPage, nhlURL, segments } from './NhlPage'
 import { TeamForm } from './TeamForm'
@@ -21,17 +22,20 @@ export async function NhlTeamView(props: AdminViewServerProps) {
   let roster: NhlPlayer[] = []
   let capSummaries: TeamCapSummary[] = []
   let standings: NhlTeamStats[] = []
+  let injuries: null | TeamInjuries = null
   let error: null | string = null
 
   if (!/^[A-Z]{2,5}$/.test(abbreviation)) {
     error = `There’s no team ${abbreviation}.`
   } else {
     try {
-      ;[team, roster, capSummaries, standings] = await Promise.all([
+      ;[team, roster, capSummaries, standings, injuries] = await Promise.all([
         hockeyApi<NhlTeamAdmin>(`/api/v1/admin/teams/${abbreviation}`),
         hockeyApi<NhlPlayer[]>(`/api/v1/teams/${abbreviation}/roster`),
         hockeyApi<TeamCapSummary[]>(`/api/v1/admin/cap-summaries?team=${abbreviation}`),
         hockeyApi<NhlTeamStats[]>(`/api/v1/teams/${abbreviation}/stats`),
+        // An API from before injuries doesn't have them: the page shows without
+        hockeyApi<TeamInjuries>(`/api/v1/teams/${abbreviation}/injuries`).catch(() => null),
       ])
     } catch (caught) {
       error =
@@ -76,9 +80,16 @@ export async function NhlTeamView(props: AdminViewServerProps) {
       <section className="nhl-data__section">
         <h2>Salary cap</h2>
         <p className="nhl-data__hint">
-          As last worked out from the players’ contracts and stored: the research script does it after each run.
+          As last worked out from the players’ contracts and stored: the research script does it after each run, and
+          the API after each injury change. Players on LTIR still count, but let the team exceed the cap by its LTIR
+          relief: “cap space with LTIR” is the room it really has.
         </p>
         <CapSummaries abbreviation={team.abbreviation} summaries={capSummaries} />
+      </section>
+
+      <section className="nhl-data__section">
+        <h2>Injuries</h2>
+        <InjuriesPanel injuries={injuries} roster={roster} />
       </section>
 
       <section className="nhl-data__section">
