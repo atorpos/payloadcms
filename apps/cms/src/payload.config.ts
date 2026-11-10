@@ -10,6 +10,7 @@ import { ensureChatRetentionIndexes } from './collections/chatRetention'
 import { ChatSessions } from './collections/ChatSessions'
 import { Clients } from './collections/Clients'
 import { Events } from './collections/Events'
+import { HockeyFantasyLeagues } from './collections/HockeyFantasyLeagues'
 import { HockeyFantasyTeams } from './collections/HockeyFantasyTeams'
 import { HockeyMembers } from './collections/HockeyMembers'
 import { MarketMaterials } from './collections/MarketMaterials'
@@ -52,6 +53,11 @@ import {
   hockeyAccountSaveEndpoint,
   hockeyAccountSignOutEndpoint,
 } from './endpoints/hockeyAccounts'
+import {
+  hockeyFantasyLeagueDeleteEndpoint,
+  hockeyFantasyLeagueEndpoint,
+  hockeyFantasyLeagueSaveEndpoint,
+} from './endpoints/hockeyFantasyLeague'
 import {
   hockeyFantasyTeamCreateEndpoint,
   hockeyFantasyTeamDeleteEndpoint,
@@ -192,6 +198,7 @@ export default buildConfig({
     MarketPrices,
     PushNotifications,
     HockeyMembers,
+    HockeyFantasyLeagues,
     HockeyFantasyTeams,
     ...vigorCollections,
   ],
@@ -232,6 +239,9 @@ export default buildConfig({
     hockeyAccountPasswordResetEndpoint,
     hockeyAccountSaveEndpoint,
     hockeyAccountSignOutEndpoint,
+    hockeyFantasyLeagueDeleteEndpoint,
+    hockeyFantasyLeagueEndpoint,
+    hockeyFantasyLeagueSaveEndpoint,
     hockeyFantasyTeamCreateEndpoint,
     hockeyFantasyTeamDeleteEndpoint,
     hockeyFantasyTeamEndpoint,
