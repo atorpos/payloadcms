@@ -22,8 +22,10 @@ import {
  * the account's ID in the API.
  *
  * The league, as every endpoint answers it:
- * `{ id, name, teams: [{ id, name, manager, mine, players: [{ playerId, fullName, position, team }] }], createdAt,
- * updatedAt }`, empty fields as null, teams and players in the order they were added.
+ * `{ id, name, teams: [{ id, name, manager, mine, points, pointsThrough,
+ * players: [{ playerId, fullName, position, team }] }], createdAt, updatedAt }`, empty fields as null, teams and
+ * players in the order they were added. `points` is the team's stored total and `pointsThrough` the last game day it
+ * counts (src/endpoints/hockeyFantasyPoints.ts); both null until the first nightly count.
  */
 
 /** What the API sends to set up or change the league: all of it */
@@ -55,7 +57,8 @@ export const hockeyFantasyLeagueEndpoint: Endpoint = {
 /**
  * `PUT /api/hockey/members/:appUserId/fantasy-league` - sets up the account's league, or replaces it, all at once.
  * Body: `{ name, teams: [{ id, name, manager, mine, players: [{ playerId, fullName, position, team }] }] }`, at most
- * 20 teams of 40 players, one of them `mine`. A team sent with the `id` it has keeps it; one without is added.
+ * 20 teams of 40 players, one of them `mine`. A team sent with the `id` it has keeps it, with its stored points;
+ * one without is added, and its points are counted from the next night.
  *
  * Answers the league with `201` when it was set up, `200` when it was changed; `404` without a member, which the API
  * adds first (`PUT /api/hockey/members/:appUserId`). Invalid fields get `400` with `{ errors: [{ message, path }] }`.
@@ -176,7 +179,9 @@ const leagueData = async (req: PayloadRequest, existing: HockeyFantasyLeague | n
     return badRequest({ message: `At most ${MAX_LEAGUE_TEAMS} teams.`, path: 'teams' })
   }
 
-  const knownTeamIds = new Set((existing?.teams ?? []).map((team) => team.id).filter(Boolean))
+  const knownTeams = new Map(
+    (existing?.teams ?? []).filter((team) => team.id).map((team) => [team.id, team]),
+  )
   const teams = []
 
   for (const [index, team] of (body.teams as unknown[]).entries()) {
@@ -187,10 +192,18 @@ const leagueData = async (req: PayloadRequest, existing: HockeyFantasyLeague | n
       return badRequest(players)
     }
 
-    const id = typeof fields.id === 'string' && knownTeamIds.has(fields.id) ? fields.id : undefined
+    const known = typeof fields.id === 'string' ? knownTeams.get(fields.id) : undefined
 
     teams.push({
-      ...(id ? { id } : {}),
+      // A team it has keeps its ID and the points stored for it: the app doesn't send those
+      ...(known
+        ? {
+            id: known.id,
+            points: known.points ?? null,
+            pointsLog: known.pointsLog ?? [],
+            pointsThrough: known.pointsThrough ?? null,
+          }
+        : {}),
       manager: text(fields.manager) ?? null,
       mine: fields.mine === true,
       // Required: Payload refuses an empty one
@@ -249,6 +262,8 @@ const toAppLeague = (league: HockeyFantasyLeague) => ({
     manager: team.manager ?? null,
     mine: team.mine === true,
     name: team.name,
+    points: typeof team.points === 'number' ? team.points : null,
+    pointsThrough: team.pointsThrough ?? null,
     players: (team.players ?? []).map((player) => ({
       fullName: player.fullName ?? null,
       playerId: player.playerId,

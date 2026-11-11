@@ -44,7 +44,7 @@ uses to test templates.
 | `src/endpoints/appChat.ts`                 | Saves VgemsAI app chats, deletes app accounts' data (see "The VgemsAI app")            |
 | `src/collections/ChatSessions.ts`, `…/ChatMessages.ts` | VgemsAI app conversations, deleted after 90 days (see "Chats")             |
 | `src/collections/HockeyMembers.ts`, `src/endpoints/hockeyMembers.ts` | Profiles of the HockeyPoolCap app's accounts (see "The HockeyPoolCap app") |
-| `src/collections/HockeyFantasyLeagues.ts`, `src/endpoints/hockeyFantasyLeague.ts` | The fantasy league each of those accounts sets up in the app: its teams, theirs marked as theirs |
+| `src/collections/HockeyFantasyLeagues.ts`, `src/endpoints/hockeyFantasyLeague.ts`, `src/endpoints/hockeyFantasyPoints.ts` | The fantasy league each of those accounts sets up in the app: its teams, theirs marked as theirs, and each team's points counted every night |
 | `src/collections/HockeyFantasyTeams.ts`, `src/endpoints/hockeyFantasyTeams.ts` | Their fantasy teams from before the app had leagues |
 | `src/collections/HockeyPushNotifications.ts`, `src/endpoints/hockeyPushNotifications.ts` | Push notifications to the HockeyPoolCap app (see "Push notifications to the HockeyPoolCap app") |
 | `src/components/NhlData`, `src/nhl`, `src/endpoints/nhlData.ts` | The NHL Data screens: the HockeyPoolCap API's teams, players and stats, read and changed there (see "NHL data") |
@@ -1251,9 +1251,14 @@ account's ID in the API.
   the app, with every team in it. For now each person has one league, with **one team of their own** (checked **Their
   team**; the app shows it as "My Team") and the teams they play against, which they add themselves, each with who runs
   it (**Manager**). Each team keeps the NHL players on it, each by his ID in the API, with his name, position and team
-  as they were when picked; the API adds everyone's points from its stats and ranks the teams, so none are kept here.
-  Only one team can be theirs: saving a second is refused. The API adds the member the first time someone saves
-  their league.
+  as they were when picked. Only one team can be theirs: saving a second is refused. The API adds the member the first
+  time someone saves their league.
+- **Team points** (each team's **Total Points**, **Counted Through** and **Points by Day**): every night at 3:30
+  Eastern the API adds the day's fantasy points of the players on each team then, so a player traded away keeps the
+  points he earned with the team he earned them for. The first night a team is counted it starts from its players'
+  points so far this season. **Change Total Points to correct an error**: the next night adds to what you set (your
+  change isn't listed under Points by Day). The app shows these totals in the standings, and each player's points
+  counted on the phone. Leagues kept on a phone (people not signed in) aren't here and add up their players' points.
 - **Fantasy teams** (HockeyPoolCap App → Fantasy Teams): the separate teams the app saved until it had leagues. Older
   versions of the app still use them; the new one offers to move each into the league.
 - Deleting a member, here or by deleting the account, deletes their fantasy league and teams. People who use the app
@@ -1274,13 +1279,15 @@ The API uses these endpoints (`src/endpoints/hockeyMembers.ts`, `src/endpoints/h
 | `DELETE /api/hockey/members/:appUserId` | Deletes the member with its fantasy league and teams; `204` whether or not there was one |
 | `GET /api/hockey/members/:appUserId/fantasy-league` | The member's league; `404` when there's none (or no member) |
 | `PUT /api/hockey/members/:appUserId/fantasy-league` | Sets up or replaces the league, all at once: `{name, teams: [{id, name, manager, mine, players: [{playerId, fullName, position, team}]}]}`, at most 20 teams of 40 players, one `mine`. A team sent with its `id` keeps it; one without is added. `201` when set up, `200` when changed; `404` when there's no member |
+| `GET /api/hockey/fantasy-leagues?page=&limit=` | Every league, a page at a time (100 at most): `{docs: [{id, name, teams: [{id, name, playerIds, points, pointsThrough}]}], page, hasNextPage}`, for the nightly count |
+| `POST /api/hockey/fantasy-leagues/:id/points` | Adds a night's count: `{teams: [{teamId, from, through, days: [{date, points}]}]}`, or for a team not counted yet `{teamId, from: null, through, start}`. A team no longer counted through `from` is skipped, so a count is never added twice: `{teams: [{teamId, status: added / skipped / missing, points}]}` |
 | `DELETE /api/hockey/members/:appUserId/fantasy-league` | Deletes the league; `204` whether or not there was one |
 | `GET /api/hockey/members/:appUserId/fantasy-teams` | The member's teams, newest first: `{docs: [team]}`; none when there's no member |
 | `POST /api/hockey/members/:appUserId/fantasy-teams` | Adds a team: `{name, league, players: [{playerId, fullName, position, team}]}`, at most 40 players. `201`; `404` when there's no member |
 | `GET`, `PUT`, `DELETE /api/hockey/members/:appUserId/fantasy-teams/:teamId` | One of the member's teams; `PUT` replaces it with the same body as the `POST`. `404` for another member's team |
 
-A league is answered as `{id, name, teams: [{id, name, manager, mine, players: [{playerId, fullName, position, team}]}],
-createdAt, updatedAt}`, a team from before leagues as `{id, name, league, players: [...], createdAt, updatedAt}`.
+A league is answered as `{id, name, teams: [{id, name, manager, mine, points, pointsThrough, players: [{playerId,
+fullName, position, team}]}], createdAt, updatedAt}` (a saved team keeps its points; `null` until counted), a team from before leagues as `{id, name, league, players: [...], createdAt, updatedAt}`.
 
 ```bash
 curl -X PUT -H "X-API-Key: $HOCKEY_API_KEY" -H 'Content-Type: application/json' \

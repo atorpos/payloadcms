@@ -1471,6 +1471,25 @@ export interface HockeyFantasyLeague {
               id?: string | null;
             }[]
           | null;
+        /**
+         * Their fantasy points this season. Every night at 3:30 Eastern the HockeyPoolCap API adds the day's points of the players on the team then, so a player traded away keeps his points with the team he earned them for. Change it to correct an error: the next night adds to what you set. Empty until the first night counts it.
+         */
+        points?: number | null;
+        /**
+         * The last game day (Eastern) the nightly count added, e.g. 2026-11-10
+         */
+        pointsThrough?: string | null;
+        /**
+         * What each night added, newest last: the first line is the starting total (the players' points so far when the count began). Your changes to Total Points are not listed.
+         */
+        pointsLog?:
+          | {
+              date: string;
+              points: number;
+              note?: string | null;
+              id?: string | null;
+            }[]
+          | null;
         id?: string | null;
       }[]
     | null;
@@ -2759,6 +2778,16 @@ export interface HockeyFantasyLeaguesSelect<T extends boolean = true> {
               position?: T;
               team?: T;
               playerId?: T;
+              id?: T;
+            };
+        points?: T;
+        pointsThrough?: T;
+        pointsLog?:
+          | T
+          | {
+              date?: T;
+              points?: T;
+              note?: T;
               id?: T;
             };
         id?: T;
