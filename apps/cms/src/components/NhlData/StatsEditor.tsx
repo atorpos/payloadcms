@@ -18,6 +18,13 @@ const SKATER: StatField[] = [
   { label: 'PTS', name: 'points', title: 'Points (empty: goals + assists)' },
   { label: '+/-', name: 'plusMinus', title: 'Plus/minus' },
   { label: 'PIM', name: 'penaltyMinutes', title: 'Penalty minutes' },
+  { label: 'GWG', name: 'gameWinningGoals', title: 'Game-winning goals' },
+  { label: 'PPG', name: 'powerPlayGoals', title: 'Power-play goals' },
+  { label: 'PPP', name: 'powerPlayPoints', title: 'Power-play points' },
+  { label: 'SHG', name: 'shorthandedGoals', title: 'Short-handed goals' },
+  { label: 'SHP', name: 'shorthandedPoints', title: 'Short-handed points' },
+  { label: 'OTG', name: 'overtimeGoals', title: 'Overtime goals' },
+  { label: 'S', name: 'shots', title: 'Shots on goal' },
 ]
 
 const GOALIE: StatField[] = [
@@ -28,6 +35,9 @@ const GOALIE: StatField[] = [
   { label: 'SO', name: 'shutouts', title: 'Shutouts' },
   { decimals: 2, label: 'GAA', name: 'goalsAgainstAverage', title: 'Goals against average, e.g. 2.45' },
   { decimals: 3, label: 'SV%', name: 'savePercentage', title: 'Save percentage, e.g. 0.915' },
+  { label: 'GS', name: 'gamesStarted', title: 'Games started' },
+  { label: 'SA', name: 'shotsAgainst', title: 'Shots against' },
+  { label: 'GA', name: 'goalsAgainst', title: 'Goals against' },
 ]
 
 /** Every number the API keeps for a season: what the form doesn't show is sent as it was, so nothing is lost */
