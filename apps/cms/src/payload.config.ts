@@ -14,6 +14,7 @@ import { Events } from './collections/Events'
 import { HockeyFantasyLeagues } from './collections/HockeyFantasyLeagues'
 import { HockeyFantasyTeams } from './collections/HockeyFantasyTeams'
 import { HockeyMembers } from './collections/HockeyMembers'
+import { HockeyPushNotifications } from './collections/HockeyPushNotifications'
 import { MarketMaterials } from './collections/MarketMaterials'
 import { MarketPrices } from './collections/MarketPrices'
 import { Organizations } from './collections/Organizations'
@@ -81,6 +82,11 @@ import {
   hockeyMemberEndpoint,
   hockeyMemberSaveEndpoint,
 } from './endpoints/hockeyMembers'
+import {
+  hockeyPushNotificationResultEndpoint,
+  hockeyPushNotificationsDueEndpoint,
+  hockeyPushNotificationStartEndpoint,
+} from './endpoints/hockeyPushNotifications'
 import {
   nhlCapSummariesEndpoint,
   nhlCareerSaveEndpoint,
@@ -213,6 +219,7 @@ export default buildConfig({
     HockeyMembers,
     HockeyFantasyLeagues,
     HockeyFantasyTeams,
+    HockeyPushNotifications,
     ...vigorCollections,
   ],
   cors: allowedOrigins,
@@ -268,6 +275,9 @@ export default buildConfig({
     hockeyMemberDeleteEndpoint,
     hockeyMemberEndpoint,
     hockeyMemberSaveEndpoint,
+    hockeyPushNotificationResultEndpoint,
+    hockeyPushNotificationsDueEndpoint,
+    hockeyPushNotificationStartEndpoint,
     nhlCapSummariesEndpoint,
     nhlCareerSaveEndpoint,
     nhlCareerStatusEndpoint,
