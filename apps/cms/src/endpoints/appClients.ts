@@ -5,6 +5,7 @@ import { ValidationError } from 'payload'
 import type { Client } from '../payload-types'
 
 import { refuseWithoutAppApiKey } from './appApiKey'
+import { linkAppClient } from './appOrganizations'
 
 /** What awoz-api sends: the signup's name and email, and the company details it asked for */
 type AppClient = {
@@ -94,6 +95,8 @@ export const appClientsEndpoint: Endpoint = {
         depth: 0,
         overrideAccess: true,
       })
+      // Their company or a report may have arrived first
+      await linkAppClient({ appUserId, clientId: client.id, req })
 
       return Response.json({ id: client.id }, { status: 201 })
     } catch (error) {

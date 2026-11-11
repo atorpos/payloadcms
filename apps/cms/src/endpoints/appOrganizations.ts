@@ -155,3 +155,57 @@ export const appOrganizationDeleteEndpoint: Endpoint = {
   method: 'delete',
   path: '/app/organizations/:id',
 }
+
+/**
+ * Links a client made from an app signup to the companies and chat reports that already name its account: awoz-api
+ * sends a new account's company and reports on their own schedule, so they can arrive before its client.
+ */
+export const linkAppClient = async ({
+  appUserId,
+  clientId,
+  req,
+}: {
+  appUserId: number
+  clientId: string
+  req: PayloadRequest
+}) => {
+  const { docs: organizations } = await req.payload.find({
+    collection: 'organizations',
+    depth: 0,
+    overrideAccess: true,
+    pagination: false,
+    where: { 'members.appUserId': { equals: appUserId } },
+  })
+  for (const organization of organizations) {
+    await req.payload.update({
+      id: organization.id,
+      collection: 'organizations',
+      data: {
+        members: (organization.members ?? []).map((member) =>
+          member.appUserId === appUserId ? { ...member, client: clientId } : member,
+        ),
+      },
+      depth: 0,
+      overrideAccess: true,
+    })
+  }
+
+  for (const side of ['reporter', 'reported'] as const) {
+    const { docs: reports } = await req.payload.find({
+      collection: 'chat-reports',
+      depth: 0,
+      overrideAccess: true,
+      pagination: false,
+      where: { [`${side}.appUserId`]: { equals: appUserId } },
+    })
+    for (const report of reports) {
+      await req.payload.update({
+        id: report.id,
+        collection: 'chat-reports',
+        data: { [side]: { ...report[side], client: clientId } },
+        depth: 0,
+        overrideAccess: true,
+      })
+    }
+  }
+}
