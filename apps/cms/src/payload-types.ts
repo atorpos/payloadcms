@@ -140,6 +140,7 @@ export type LexicalNodes_04AF6417 =
       | 'hockey-members'
       | 'hockey-fantasy-leagues'
       | 'hockey-fantasy-teams'
+      | 'hockey-push-notifications'
       | 'vigor-products'
       | 'vigor-services'
       | 'vigor-news'
@@ -191,6 +192,7 @@ export interface Config {
     'hockey-members': HockeyMember;
     'hockey-fantasy-leagues': HockeyFantasyLeague;
     'hockey-fantasy-teams': HockeyFantasyTeam;
+    'hockey-push-notifications': HockeyPushNotification;
     'vigor-products': VigorProduct;
     'vigor-services': VigorService;
     'vigor-news': VigorNewsArticle;
@@ -239,6 +241,7 @@ export interface Config {
     'hockey-members': HockeyMembersSelect<false> | HockeyMembersSelect<true>;
     'hockey-fantasy-leagues': HockeyFantasyLeaguesSelect<false> | HockeyFantasyLeaguesSelect<true>;
     'hockey-fantasy-teams': HockeyFantasyTeamsSelect<false> | HockeyFantasyTeamsSelect<true>;
+    'hockey-push-notifications': HockeyPushNotificationsSelect<false> | HockeyPushNotificationsSelect<true>;
     'vigor-products': VigorProductsSelect<false> | VigorProductsSelect<true>;
     'vigor-services': VigorServicesSelect<false> | VigorServicesSelect<true>;
     'vigor-news': VigorNewsSelect<false> | VigorNewsSelect<true>;
@@ -1253,7 +1256,7 @@ export interface PushNotification {
   createdAt: string;
 }
 /**
- * Everyone with an account in the HockeyPoolCap app. What you change here shows on their profile in the app. Deleting a member deletes their fantasy teams too.
+ * Everyone with an account in the HockeyPoolCap app. What you change here shows on their profile in the app. Deleting a member deletes their fantasy league and teams too.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "hockey-members".
@@ -1423,6 +1426,102 @@ export interface HockeyFantasyTeam {
    * Whose team it is. Set by the app.
    */
   member: string | HockeyMember;
+  createdBy?: {
+    relationTo: 'users';
+    value: string | User;
+  } | null;
+  updatedBy?: {
+    relationTo: 'users';
+    value: string | User;
+  } | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Notifications on the phones of HockeyPoolCap app users with notifications on. Choose "Now" or a time under Send, and save: it goes out within a minute of that time. The daily game recaps go out by themselves.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "hockey-push-notifications".
+ */
+export interface HockeyPushNotification {
+  id: string;
+  /**
+   * In bold on the notification, e.g. "Trade deadline tonight"
+   */
+  title: string;
+  body: string;
+  /**
+   * The tab the app opens when the notification is tapped
+   */
+  screen: 'home' | 'teams' | 'players' | 'fantasy' | 'settings';
+  audience: 'everyone' | 'teamFans' | 'members';
+  /**
+   * The phones with one of these as a favorite team in the app
+   */
+  teams?:
+    | (
+        | 'ANA'
+        | 'BOS'
+        | 'BUF'
+        | 'CGY'
+        | 'CAR'
+        | 'CHI'
+        | 'COL'
+        | 'CBJ'
+        | 'DAL'
+        | 'DET'
+        | 'EDM'
+        | 'FLA'
+        | 'LAK'
+        | 'MIN'
+        | 'MTL'
+        | 'NSH'
+        | 'NJD'
+        | 'NYI'
+        | 'NYR'
+        | 'OTT'
+        | 'PHI'
+        | 'PIT'
+        | 'SJS'
+        | 'SEA'
+        | 'STL'
+        | 'TBL'
+        | 'TOR'
+        | 'UTA'
+        | 'VAN'
+        | 'VGK'
+        | 'WSH'
+        | 'WPG'
+      )[]
+    | null;
+  /**
+   * Members get it on the phones they are signed in on in the app, with notifications on.
+   */
+  members?: (string | HockeyMember)[] | null;
+  delivery: 'draft' | 'now' | 'scheduled';
+  sendAt?: string | null;
+  sendAt_tz?: SupportedTimezones;
+  status: 'draft' | 'queued' | 'sending' | 'sent' | 'failed';
+  sentAt?: string | null;
+  results?: {
+    /**
+     * Phones it was sent to
+     */
+    devices?: number | null;
+    /**
+     * Accepted by Firebase
+     */
+    delivered?: number | null;
+    /**
+     * Not accepted, e.g. Firebase was busy
+     */
+    failed?: number | null;
+    /**
+     * Phones that no longer have the app or notifications: never sent to again
+     */
+    removed?: number | null;
+  };
+  problem?: string | null;
   createdBy?: {
     relationTo: 'users';
     value: string | User;
@@ -1814,6 +1913,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'hockey-fantasy-teams';
         value: string | HockeyFantasyTeam;
+      } | null)
+    | ({
+        relationTo: 'hockey-push-notifications';
+        value: string | HockeyPushNotification;
       } | null)
     | ({
         relationTo: 'vigor-products';
@@ -2511,6 +2614,36 @@ export interface HockeyFantasyTeamsSelect<T extends boolean = true> {
         id?: T;
       };
   member?: T;
+  createdBy?: T;
+  updatedBy?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "hockey-push-notifications_select".
+ */
+export interface HockeyPushNotificationsSelect<T extends boolean = true> {
+  title?: T;
+  body?: T;
+  screen?: T;
+  audience?: T;
+  teams?: T;
+  members?: T;
+  delivery?: T;
+  sendAt?: T;
+  sendAt_tz?: T;
+  status?: T;
+  sentAt?: T;
+  results?:
+    | T
+    | {
+        devices?: T;
+        delivered?: T;
+        failed?: T;
+        removed?: T;
+      };
+  problem?: T;
   createdBy?: T;
   updatedBy?: T;
   updatedAt?: T;
@@ -4093,6 +4226,7 @@ export interface CollectionQueryWidget {
       | 'hockey-members'
       | 'hockey-fantasy-leagues'
       | 'hockey-fantasy-teams'
+      | 'hockey-push-notifications'
       | 'vigor-products'
       | 'vigor-services'
       | 'vigor-news'
@@ -4138,6 +4272,7 @@ export interface ActivityWidget {
           | 'hockey-members'
           | 'hockey-fantasy-leagues'
           | 'hockey-fantasy-teams'
+          | 'hockey-push-notifications'
           | 'vigor-products'
           | 'vigor-services'
           | 'vigor-news'

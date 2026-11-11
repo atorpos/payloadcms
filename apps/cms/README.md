@@ -46,6 +46,7 @@ uses to test templates.
 | `src/collections/HockeyMembers.ts`, `src/endpoints/hockeyMembers.ts` | Profiles of the HockeyPoolCap app's accounts (see "The HockeyPoolCap app") |
 | `src/collections/HockeyFantasyLeagues.ts`, `src/endpoints/hockeyFantasyLeague.ts` | The fantasy league each of those accounts sets up in the app: its teams, theirs marked as theirs |
 | `src/collections/HockeyFantasyTeams.ts`, `src/endpoints/hockeyFantasyTeams.ts` | Their fantasy teams from before the app had leagues |
+| `src/collections/HockeyPushNotifications.ts`, `src/endpoints/hockeyPushNotifications.ts` | Push notifications to the HockeyPoolCap app (see "Push notifications to the HockeyPoolCap app") |
 | `src/components/NhlData`, `src/nhl`, `src/endpoints/nhlData.ts` | The NHL Data screens: the HockeyPoolCap API's teams, players and stats, read and changed there (see "NHL data") |
 | `src/components/HockeyAccounts`, `src/hockeyAccounts`, `src/endpoints/hockeyAccounts.ts` | The HockeyPoolCap Accounts screens: the Hockolic app's accounts, read and changed in the API (see "HockeyPoolCap accounts") |
 | `src/app/(frontend)/ios-app/`, `scripts/import-legal-pages.ts` | Privacy Policy and Terms of Use of the app and the Vigor website (see "Privacy policy and terms of use") |
@@ -1265,6 +1266,30 @@ curl -X PUT -H "X-API-Key: $HOCKEY_API_KEY" -H 'Content-Type: application/json' 
 
 Invalid values, such as a display name over 40 characters or a team that isn't an abbreviation, get `400` with
 `{"errors": [{"message": "…", "path": "favoriteTeam"}]}`.
+
+### Push notifications to the HockeyPoolCap app
+
+**HockeyPoolCap App → Push Notifications** works like the VgemsAI app's (see "Push notifications" under "The VgemsAI
+app"): write a title and a message, choose the tab the app opens when it's tapped (**Opens**: Home, Teams, Players,
+Fantasy or Settings) and who gets it (**To**):
+
+- **Everyone with notifications on**
+- **Fans of chosen teams**: the phones with one of those teams among their favorite teams in the app (up to three
+  each)
+- **Chosen members**: on the phones they're signed in on
+
+Under **Send**, choose **Now** or **At a set time** and save. The HockeyPoolCap API checks every minute for the ones
+due and sends them through Firebase to the phones it keeps (the API's README: "Push notifications", which has the
+Firebase setup); the sidebar then shows how it went. Sent ones are locked (**Duplicate** to send again), deleting one
+that hasn't gone out cancels it, and **Failed** comes with the reason, e.g. no Firebase service account on the API.
+
+The **daily game recaps** aren't written here: the API sends each phone one by itself every morning (its favorite
+teams' results, its favorite players' points, wins and shutouts, and its fantasy team's points).
+
+The API uses three endpoints (`src/endpoints/hockeyPushNotifications.ts`), with `X-API-Key: <HOCKEY_API_KEY>`:
+`GET /api/hockey/push-notifications/due` lists the notifications due, with the chosen teams or the members' accounts
+in the API (`appUserIds`); `POST /api/hockey/push-notifications/:id/start` marks one as sending (`409` if it no longer
+waits); `POST /api/hockey/push-notifications/:id/result` saves how it went.
 
 ## NHL data
 
