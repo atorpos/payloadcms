@@ -7,6 +7,7 @@ import { fileURLToPath } from 'url'
 
 import { ChatMessages } from './collections/ChatMessages'
 import { ensureChatRetentionIndexes } from './collections/chatRetention'
+import { ChatReports } from './collections/ChatReports'
 import { ChatSessions } from './collections/ChatSessions'
 import { Clients } from './collections/Clients'
 import { Events } from './collections/Events'
@@ -15,6 +16,7 @@ import { HockeyFantasyTeams } from './collections/HockeyFantasyTeams'
 import { HockeyMembers } from './collections/HockeyMembers'
 import { MarketMaterials } from './collections/MarketMaterials'
 import { MarketPrices } from './collections/MarketPrices'
+import { Organizations } from './collections/Organizations'
 import { PushNotifications } from './collections/PushNotifications'
 import { seedMarketMaterials } from './collections/marketSeed'
 import { Media, mediaVariants } from './collections/Media'
@@ -38,8 +40,17 @@ import {
   appEventDiscoveryEndpoint,
   appEventDiscoverySaveEndpoint,
 } from './endpoints/appEventDiscovery'
+import {
+  appChatReportAppliedEndpoint,
+  appChatReportsDecidedEndpoint,
+  appChatReportsEndpoint,
+} from './endpoints/appChatReports'
 import { appEventsEndpoint } from './endpoints/appEvents'
 import { appMarketEndpoint, appMarketPricesEndpoint } from './endpoints/appMarket'
+import {
+  appOrganizationDeleteEndpoint,
+  appOrganizationSaveEndpoint,
+} from './endpoints/appOrganizations'
 import { appProductsEndpoint } from './endpoints/appProducts'
 import {
   appPushNotificationResultEndpoint,
@@ -191,9 +202,11 @@ export default buildConfig({
     Pages,
     Profiles,
     Clients,
+    Organizations,
     Events,
     ChatSessions,
     ChatMessages,
+    ChatReports,
     MarketMaterials,
     MarketPrices,
     PushNotifications,
@@ -220,6 +233,9 @@ export default buildConfig({
   endpoints: [
     appAccountDeleteEndpoint,
     appChatMessagesEndpoint,
+    appChatReportAppliedEndpoint,
+    appChatReportsDecidedEndpoint,
+    appChatReportsEndpoint,
     appChatSessionSummaryEndpoint,
     appChatSessionsToSummarizeEndpoint,
     appClientByAccountEndpoint,
@@ -230,6 +246,8 @@ export default buildConfig({
     appEventDiscoverySaveEndpoint,
     appMarketEndpoint,
     appMarketPricesEndpoint,
+    appOrganizationDeleteEndpoint,
+    appOrganizationSaveEndpoint,
     appProductsEndpoint,
     appPushNotificationsDueEndpoint,
     appPushNotificationStartEndpoint,

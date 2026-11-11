@@ -4,7 +4,7 @@ slug: terms-of-use
 description: The terms for using the VgemsAI app, the Vigor Gems website and your account, including the AI assistant.
 ---
 
-_Last updated: October 28, 2026_
+_Last updated: November 11, 2026_
 
 These Terms of Use ("Terms") are an agreement between you and Vigor Gems ("Vigor", "we", "us") for using the VgemsAI app and its widgets, the Vigor Gems website, and your account, which works in both (together, "our services"). By creating an account or using our services, you agree to these Terms and to our [Privacy Policy](page:privacy-policy), which explains how we handle your information. If you don't agree, please don't use our services.
 
@@ -45,6 +45,12 @@ Our services don't take orders or payments. A quote or meeting request you send 
 
 Event information, such as dates, times, venues and booth numbers, comes from event organizers and may change. Check with the organizer before you travel. Map locations may be approximate.
 
+## Companies, contacts and messages
+
+In the app, you can create your company or join it, and chat with the people in it and with contacts you add. When you create a company, you're its admin: you decide who joins with its code, and you can remove people. Your company's email domain lets people who verify an email there join by themselves, so create a company only for a business you work for.
+
+Messages are between you and the people you write to. We don't check them before they're sent, but we review messages that are reported to us. There is no tolerance for objectionable content or abusive users: report a message or a person in the chat, and block anyone you don't want to hear from. We act on reports within 24 hours, and may remove messages and suspend or close the accounts that sent them.
+
 ## Acceptable use
 
 You agree not to:
@@ -55,7 +61,9 @@ You agree not to:
 - copy, scrape or collect data from our services with automated tools, or send automated requests to them;
 - copy, modify, reverse engineer or resell our services, except where the law expressly allows it;
 - disrupt or overload our services or the servers and networks behind them;
-- send spam or unsolicited messages through our contact form;
+- send spam or unsolicited messages through our contact form or in the app's chats;
+- harass, threaten, insult or deceive other people, or send them hateful, sexual, violent or otherwise objectionable content, scams or malware;
+- join a company you don't work for, or add people to contacts to send them unwanted advertising;
 - pretend to be another person or company, or give false information about yourself or your business.
 
 We may limit, suspend or close an account that breaks these Terms, or when we have to by law.

@@ -4,7 +4,7 @@ slug: privacy-policy
 description: What Vigor Gems collects through the VgemsAI app and the Vigor Gems website, why, who it is shared with, how long it is kept, and how to see, change or delete it.
 ---
 
-_Last updated: October 30, 2026_
+_Last updated: November 11, 2026_
 
 This Privacy Policy explains how Vigor Gems ("Vigor", "we", "us") collects, uses and shares information when you use the VgemsAI app and its widgets, the Vigor Gems website, and your account, which works in both (together, "our services").
 
@@ -17,13 +17,17 @@ Our services are made for jewelry and gemstone businesses, such as retailers, de
 - Questions you ask the assistant are sent to an AI provider (Anthropic or OpenAI) to write the answers.
 - On the website, Google Analytics runs only if you accept it in the cookie banner.
 - We don't sell your personal information, we don't show ads, and we don't track you across other companies' apps or websites.
-- Chats in the app are deleted automatically after 90 days. You can delete your account and its data at any time.
+- In the app you can join your company and chat with your colleagues and contacts. They see your name and company, and the messages you send them; our team reads a message only when someone reports it.
+- Chats with the assistant in the app are deleted automatically after 90 days. You can delete your account and its data at any time.
 
 ## Information you give us
 
 - **Account details:** your name, email address and password. We never store your password itself, only a one-way hash of it that can't be turned back into the password.
 - **Company details:** the company you work for, your job title, business type, industry, phone number, website and business address (street, city, state or province, postal code and country). You give these at signup and can change them later in your account, in the app or on the website.
 - **Chats with the AI assistant:** the questions you type and the answers you receive. In the app, we save them with your account. On the website, the conversation stays in your browser, and we don't save it.
+- **Your company in the app:** the company you create or join, and your role in it (admin or staff). If you ask to join a company with its code, your request, with your name and email, goes to its admins.
+- **Messages to other people:** the messages you send to your colleagues and contacts in the app, the contact requests you send and accept, and the people you block. We store messages encrypted.
+- **Reports:** when you report a person or a message, your report, what you wrote in it, and a copy of the message.
 - **Contact form:** your name, email address, company, phone number and message when you send us a request on the website, such as a quote or meeting request. It is emailed to our sales team.
 - **Messages to us:** what you send us when you contact us by email.
 
@@ -82,7 +86,9 @@ We share personal information only with:
     - Twilio SendGrid, which sends our emails, such as sign-in codes, password reset codes and contact form messages;
     - Google, for website analytics if you accept it, for the fonts and maps the website loads, and for Firebase Cloud Messaging, which passes our push notifications to Apple;
     - Apple, which delivers push notifications to your device, keeps your passkeys and provides maps.
-- **Our team**, such as sales and customer care, who need it to work with you.
+- **Our team**, such as sales and customer care, who need it to work with you. Our team doesn't read the messages between you and other people, except a message someone reports to us, which we review to keep the app safe.
+- **Other people in the app:** your colleagues (the people in your company) and your contacts see your name and company, and the messages you send them. Whoever has your personal contact code sees your name and company when they send you a request. Your company's admins also see your email address, and so do the admins of a company you ask to join.
+- **Companies in the app:** the companies and the people in them are also visible to our team, together with the customer records from your signup.
 - **Authorities and others when the law requires it**, or when it's needed to protect our rights, our customers or the public, for example to prevent fraud.
 - **A buyer or successor** if Vigor is involved in a merger, acquisition, reorganization or sale of assets, in which case this policy continues to apply to your information.
 - **Anyone else with your permission.**
@@ -92,7 +98,9 @@ To show events on the map, the app may look up an event's venue and address in A
 ## How long we keep information
 
 - **Your account and company details:** for as long as your account exists.
-- **Chats in the app:** each message is deleted automatically 90 days after it was sent, and each conversation, with its summary, 90 days after its last message. We don't save chats on the website.
+- **Messages to other people:** for as long as both accounts exist. When either deletes their account, the conversation between them is deleted.
+- **Reports:** for as long as we need them to keep the app safe and to handle the report, also after an account is deleted.
+- **Chats with the assistant in the app:** each message is deleted automatically 90 days after it was sent, and each conversation, with its summary, 90 days after its last message. We don't save chats on the website.
 - **Contact form messages:** in our email, for as long as we need them to answer you and follow up on your request.
 - **Sign-in sessions:** they end when you log out, or after 30 days without using them.
 - **Sign-in codes and password reset codes:** deleted within a day after they expire.
@@ -106,6 +114,7 @@ You can delete your account at any time: in the app, open your profile and tap *
 
 - your account, sign-in sessions, devices, Face ID or Touch ID sign-in keys and passkeys on our servers;
 - all your chats with the assistant in the app;
+- your conversations with other people, for both of you, your contacts and contact requests, and your place in your company. If you're its only admin, the person who has been in it the longest becomes its admin; if nobody else is in it, the company is deleted;
 - the company details from your signup, unless you are already a customer we work with. In that case, we keep the records of our business relationship, unlinked from your account, as described above. You can ask us to delete those records too, and we will, except for what the law requires us to keep.
 
 A passkey you created also stays in your iCloud Keychain until you delete it in your device's Passwords app.
