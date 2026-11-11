@@ -131,9 +131,11 @@ export type LexicalNodes_04AF6417 =
       | 'pages'
       | 'profiles'
       | 'clients'
+      | 'organizations'
       | 'events'
       | 'chat-sessions'
       | 'chat-messages'
+      | 'chat-reports'
       | 'market-materials'
       | 'market-prices'
       | 'push-notifications'
@@ -182,9 +184,11 @@ export interface Config {
     pages: Page;
     profiles: Profile;
     clients: Client;
+    organizations: Organization;
     events: Event;
     'chat-sessions': ChatSession;
     'chat-messages': ChatMessage;
+    'chat-reports': ChatReport;
     'market-materials': MarketMaterial;
     'market-prices': MarketPrice;
     'push-notifications': PushNotification;
@@ -230,9 +234,11 @@ export interface Config {
     pages: PagesSelect<false> | PagesSelect<true>;
     profiles: ProfilesSelect<false> | ProfilesSelect<true>;
     clients: ClientsSelect<false> | ClientsSelect<true>;
+    organizations: OrganizationsSelect<false> | OrganizationsSelect<true>;
     events: EventsSelect<false> | EventsSelect<true>;
     'chat-sessions': ChatSessionsSelect<false> | ChatSessionsSelect<true>;
     'chat-messages': ChatMessagesSelect<false> | ChatMessagesSelect<true>;
+    'chat-reports': ChatReportsSelect<false> | ChatReportsSelect<true>;
     'market-materials': MarketMaterialsSelect<false> | MarketMaterialsSelect<true>;
     'market-prices': MarketPricesSelect<false> | MarketPricesSelect<true>;
     'push-notifications': PushNotificationsSelect<false> | PushNotificationsSelect<true>;
@@ -1108,6 +1114,101 @@ export interface ChatMessage {
   createdAt: string;
 }
 /**
+ * Companies in the VgemsAI app and the people in them. Kept up to date by the app: people create, join and leave companies there.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "organizations".
+ */
+export interface Organization {
+  id: string;
+  name: string;
+  /**
+   * People who verify an email at this domain join the company by themselves. Empty when its creator uses a free email such as Gmail.
+   */
+  emailDomain?: string | null;
+  members?:
+    | {
+        /**
+         * Their client record, from their app signup
+         */
+        client?: (string | null) | Client;
+        role: 'admin' | 'staff';
+        joinedVia: 'created' | 'email' | 'code';
+        joinedAt?: string | null;
+        /**
+         * Their account in the app
+         */
+        appUserId: number;
+        id?: string | null;
+      }[]
+    | null;
+  memberCount?: number | null;
+  /**
+   * The company in the app
+   */
+  appOrganizationId: number;
+  createdBy?: {
+    relationTo: 'users';
+    value: string | User;
+  } | null;
+  updatedBy?: {
+    relationTo: 'users';
+    value: string | User;
+  } | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Reports from the chats in the VgemsAI app. Decide within 24 hours: choose a decision and save, and the app carries it out within a minute.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "chat-reports".
+ */
+export interface ChatReport {
+  id: string;
+  reason: 'spam' | 'harassment' | 'inappropriate' | 'scam' | 'other';
+  reportedAt?: string | null;
+  /**
+   * The message as it was when reported. Empty when a person was reported.
+   */
+  messageText?: string | null;
+  details?: string | null;
+  reported?: {
+    name?: string | null;
+    email?: string | null;
+    company?: string | null;
+    client?: (string | null) | Client;
+    appUserId?: number | null;
+  };
+  reporter?: {
+    name?: string | null;
+    email?: string | null;
+    company?: string | null;
+    client?: (string | null) | Client;
+    appUserId?: number | null;
+  };
+  /**
+   * Remove the message: nobody sees it any more. Suspend: also signs the sender out everywhere; they can no longer log in or chat.
+   */
+  decision: 'none' | 'dismissed' | 'remove-message' | 'suspend-user';
+  status?: ('open' | 'decided' | 'applied') | null;
+  decidedBy?: string | null;
+  decidedAt?: string | null;
+  appliedAt?: string | null;
+  appReportId?: number | null;
+  messageId?: number | null;
+  createdBy?: {
+    relationTo: 'users';
+    value: string | User;
+  } | null;
+  updatedBy?: {
+    relationTo: 'users';
+    value: string | User;
+  } | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * The prices the VgemsAI app shows under Research, where people predict whether each goes up or down next month.
  *
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1253,7 +1354,7 @@ export interface PushNotification {
   createdAt: string;
 }
 /**
- * Everyone with an account in the HockeyPoolCap app. What you change here shows on their profile in the app. Deleting a member deletes their fantasy teams too.
+ * Everyone with an account in the HockeyPoolCap app. What you change here shows on their profile in the app. Deleting a member deletes their fantasy league and teams too.
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "hockey-members".
@@ -1780,6 +1881,10 @@ export interface PayloadLockedDocument {
         value: string | Client;
       } | null)
     | ({
+        relationTo: 'organizations';
+        value: string | Organization;
+      } | null)
+    | ({
         relationTo: 'events';
         value: string | Event;
       } | null)
@@ -1790,6 +1895,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'chat-messages';
         value: string | ChatMessage;
+      } | null)
+    | ({
+        relationTo: 'chat-reports';
+        value: string | ChatReport;
       } | null)
     | ({
         relationTo: 'market-materials';
@@ -2301,6 +2410,30 @@ export interface ClientsSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "organizations_select".
+ */
+export interface OrganizationsSelect<T extends boolean = true> {
+  name?: T;
+  emailDomain?: T;
+  members?:
+    | T
+    | {
+        client?: T;
+        role?: T;
+        joinedVia?: T;
+        joinedAt?: T;
+        appUserId?: T;
+        id?: T;
+      };
+  memberCount?: T;
+  appOrganizationId?: T;
+  createdBy?: T;
+  updatedBy?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "events_select".
  */
 export interface EventsSelect<T extends boolean = true> {
@@ -2372,6 +2505,45 @@ export interface ChatMessagesSelect<T extends boolean = true> {
   outputTokens?: T;
   durationMs?: T;
   expiresAt?: T;
+  createdBy?: T;
+  updatedBy?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "chat-reports_select".
+ */
+export interface ChatReportsSelect<T extends boolean = true> {
+  reason?: T;
+  reportedAt?: T;
+  messageText?: T;
+  details?: T;
+  reported?:
+    | T
+    | {
+        name?: T;
+        email?: T;
+        company?: T;
+        client?: T;
+        appUserId?: T;
+      };
+  reporter?:
+    | T
+    | {
+        name?: T;
+        email?: T;
+        company?: T;
+        client?: T;
+        appUserId?: T;
+      };
+  decision?: T;
+  status?: T;
+  decidedBy?: T;
+  decidedAt?: T;
+  appliedAt?: T;
+  appReportId?: T;
+  messageId?: T;
   createdBy?: T;
   updatedBy?: T;
   updatedAt?: T;
@@ -4084,9 +4256,11 @@ export interface CollectionQueryWidget {
       | 'pages'
       | 'profiles'
       | 'clients'
+      | 'organizations'
       | 'events'
       | 'chat-sessions'
       | 'chat-messages'
+      | 'chat-reports'
       | 'market-materials'
       | 'market-prices'
       | 'push-notifications'
@@ -4129,9 +4303,11 @@ export interface ActivityWidget {
           | 'pages'
           | 'profiles'
           | 'clients'
+          | 'organizations'
           | 'events'
           | 'chat-sessions'
           | 'chat-messages'
+          | 'chat-reports'
           | 'market-materials'
           | 'market-prices'
           | 'push-notifications'

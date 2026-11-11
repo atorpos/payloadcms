@@ -1143,6 +1143,35 @@ awoz-api uses three endpoints (`src/endpoints/appPushNotifications.ts`): `GET /a
 the notifications due, with the app accounts of the chosen clients; `POST /api/app/push-notifications/:id/start`
 marks one as sending (`409` if it no longer waits); `POST /api/app/push-notifications/:id/result` saves how it went.
 
+#### Companies and chat
+
+In the app, every account starts on its own. With a verified email (a code the app emails) people can create a
+company, join one, add contacts and chat one to one: with anyone in their company, and with contacts from other
+companies, who add each other by scanning a personal QR code (awoz-api README: "Companies and chat").
+
+**Business → Organizations** shows the companies made in the app, with their email domain and their people, each
+linked to their client record. It's read-only: awoz-api keeps it up to date within a minute of every change, and a
+company deleted in the app is deleted here too. It uses `PUT` and `DELETE /api/app/organizations/:appOrganizationId`
+(`src/endpoints/appOrganizations.ts`).
+
+#### Chat reports
+
+People can report a person or a message in the app's chats, and block anyone. **VgemsAI App → Chat reports** lists
+the reports, with the message as it was when reported, what the reporter wrote, and both people (linked to their client
+records). The App Store expects reports to be acted on within 24 hours. Open one, choose a **Decision** and save:
+
+- **Dismiss**: nothing wrong.
+- **Remove the message**: it shows as removed for both people.
+- **Remove the message and suspend the sender**: also signs them out everywhere; they can no longer log in or chat.
+
+Within a minute awoz-api carries the decision out, and the **Status** becomes **Done**; a decision can't be changed
+after that. To lift a suspension, run on the API's PostgreSQL:
+`UPDATE users SET suspended_at = NULL WHERE id = <VgemsAI App Account>;`.
+
+awoz-api uses three endpoints (`src/endpoints/appChatReports.ts`): `POST /api/app/chat-reports` adds a report,
+`GET /api/app/chat-reports/decided` lists the decisions waiting, and `POST /api/app/chat-reports/:id/applied` marks
+one as done.
+
 #### Privacy policy and terms of use
 
 One **Privacy Policy** and one **Terms of Use** cover both the app and the Vigor website. They are ordinary pages
