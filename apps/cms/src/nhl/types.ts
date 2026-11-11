@@ -24,9 +24,12 @@ export type NhlTeam = {
 
 /** `GET /api/v1/teams/{team}/stats`: its record in a season; the standing fields come from the NHL's standings */
 export type NhlTeamStats = {
+  /** x, y, z, p: clinched a playoff spot, the division, the conference, the Presidents' Trophy; e: eliminated */
+  clinchIndicator?: null | string
   conferenceRank?: null | number
   divisionRank?: null | number
   gamesPlayed: number
+  goalDifferential?: null | number
   goalsAgainst?: null | number
   goalsFor?: null | number
   homeRecord?: null | string
@@ -37,6 +40,7 @@ export type NhlTeamStats = {
   overtimeLosses: number
   pointPercentage?: null | number
   points: number
+  regulationPlusOtWins?: null | number
   regulationWins?: null | number
   roadRecord?: null | string
   season: number
@@ -44,6 +48,8 @@ export type NhlTeamStats = {
   /** e.g. W3: three wins in a row */
   streak?: null | string
   updatedAt?: null | string
+  /** In the conference's wild card race: 1 and 2 hold the spots; null for a team in its division's top 3 */
+  wildcardRank?: null | number
   wins: number
 }
 
@@ -88,16 +94,29 @@ export type NhlPlayer = {
 export type NhlPlayerStats = {
   assists?: null | number
   gamesPlayed: number
+  /** Goalies: games started; shotsAgainst, goalsAgainst and saves (shots against less goals against) likewise */
+  gamesStarted?: null | number
+  /** Skaters: from the NHL's player pages, like powerPlayGoals to shots */
+  gameWinningGoals?: null | number
   goals?: null | number
+  goalsAgainst?: null | number
   goalsAgainstAverage?: null | number
   losses?: null | number
+  overtimeGoals?: null | number
   overtimeLosses?: null | number
   penaltyMinutes?: null | number
   plusMinus?: null | number
   points?: null | number
+  powerPlayGoals?: null | number
+  powerPlayPoints?: null | number
+  saves?: null | number
   savePercentage?: null | number
   season: number
   seasonLabel: string
+  shorthandedGoals?: null | number
+  shorthandedPoints?: null | number
+  shots?: null | number
+  shotsAgainst?: null | number
   shutouts?: null | number
   wins?: null | number
 }
