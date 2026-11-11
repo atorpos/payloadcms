@@ -71,6 +71,10 @@ import {
   hockeyFantasyLeagueSaveEndpoint,
 } from './endpoints/hockeyFantasyLeague'
 import {
+  hockeyFantasyLeaguesEndpoint,
+  hockeyFantasyPointsAddEndpoint,
+} from './endpoints/hockeyFantasyPoints'
+import {
   hockeyFantasyTeamCreateEndpoint,
   hockeyFantasyTeamDeleteEndpoint,
   hockeyFantasyTeamEndpoint,
@@ -267,6 +271,8 @@ export default buildConfig({
     hockeyFantasyLeagueDeleteEndpoint,
     hockeyFantasyLeagueEndpoint,
     hockeyFantasyLeagueSaveEndpoint,
+    hockeyFantasyLeaguesEndpoint,
+    hockeyFantasyPointsAddEndpoint,
     hockeyFantasyTeamCreateEndpoint,
     hockeyFantasyTeamDeleteEndpoint,
     hockeyFantasyTeamEndpoint,

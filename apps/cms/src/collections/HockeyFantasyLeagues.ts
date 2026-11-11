@@ -70,8 +70,10 @@ export const fantasyPlayersField = (): ArrayField => ({
  * it. Their own team is marked `mine`; the others are the teams they play against, which they add themselves, with
  * who runs each. For now each member has one league, with one team of their own in it.
  *
- * The app's backend, the HockeyPoolCap API, saves it through src/endpoints/hockeyFantasyLeague.ts and adds the
- * players' points from its stats. People without an account keep their league on the phone instead, never here.
+ * The app's backend, the HockeyPoolCap API, saves it through src/endpoints/hockeyFantasyLeague.ts. Each team's
+ * total points are kept here (`points`): every night at 3:30 Eastern the API adds the day's points of the players on
+ * the team then (src/endpoints/hockeyFantasyPoints.ts), so trades don't move points already earned, and admins can
+ * correct a total. People without an account keep their league on the phone instead, never here.
  * Private: every operation, including reading, requires a logged-in user.
  */
 export const HockeyFantasyLeagues: CollectionConfig = {
@@ -164,6 +166,56 @@ export const HockeyFantasyLeagues: CollectionConfig = {
           ],
         },
         fantasyPlayersField(),
+        {
+          type: 'row',
+          fields: [
+            {
+              name: 'points',
+              type: 'number',
+              admin: {
+                description:
+                  "Their fantasy points this season. Every night at 3:30 Eastern the HockeyPoolCap API adds the day's points of the players on the team then, so a player traded away keeps his points with the team he earned them for. Change it to correct an error: the next night adds to what you set. Empty until the first night counts it.",
+                step: 1,
+              },
+              label: 'Total Points',
+            },
+            {
+              name: 'pointsThrough',
+              type: 'text',
+              admin: {
+                description: 'The last game day (Eastern) the nightly count added, e.g. 2026-11-10',
+                readOnly: true,
+              },
+              label: 'Counted Through',
+              maxLength: 10,
+            },
+          ],
+        },
+        {
+          name: 'pointsLog',
+          type: 'array',
+          admin: {
+            description:
+              "What each night added, newest last: the first line is the starting total (the players' points so far when the count began). Your changes to Total Points are not listed.",
+            initCollapsed: true,
+            readOnly: true,
+          },
+          fields: [
+            {
+              type: 'row',
+              fields: [
+                { name: 'date', type: 'text', maxLength: 10, required: true },
+                { name: 'points', type: 'number', required: true },
+                { name: 'note', type: 'text', maxLength: 60 },
+              ],
+            },
+          ],
+          label: 'Points by Day',
+          labels: {
+            plural: 'Days',
+            singular: 'Day',
+          },
+        },
       ],
       labels: {
         plural: 'Teams',
