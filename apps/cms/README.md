@@ -1259,6 +1259,8 @@ account's ID in the API.
   points so far this season. **Change Total Points to correct an error**: the next night adds to what you set (your
   change isn't listed under Points by Day). The app shows these totals in the standings, and each player's points
   counted on the phone. Leagues kept on a phone (people not signed in) aren't here and add up their players' points.
+  A league someone brings in with a share code (a copy of a friend's league) arrives with each team's total so far,
+  listed as "Starting total (shared league)", and the nightly count adds to it.
 - **Fantasy teams** (HockeyPoolCap App → Fantasy Teams): the separate teams the app saved until it had leagues. Older
   versions of the app still use them; the new one offers to move each into the league.
 - Deleting a member, here or by deleting the account, deletes their fantasy league and teams. People who use the app

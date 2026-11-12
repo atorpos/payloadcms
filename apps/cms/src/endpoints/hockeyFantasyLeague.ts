@@ -58,7 +58,8 @@ export const hockeyFantasyLeagueEndpoint: Endpoint = {
  * `PUT /api/hockey/members/:appUserId/fantasy-league` - sets up the account's league, or replaces it, all at once.
  * Body: `{ name, teams: [{ id, name, manager, mine, players: [{ playerId, fullName, position, team }] }] }`, at most
  * 20 teams of 40 players, one of them `mine`. A team sent with the `id` it has keeps it, with its stored points;
- * one without is added, and its points are counted from the next night.
+ * one without is added, and its points are counted from the next night. A new team brought in from a shared league
+ * may come with `points` and `pointsThrough`: its total so far, which the nightly count then adds to.
  *
  * Answers the league with `201` when it was set up, `200` when it was changed; `404` without a member, which the API
  * adds first (`PUT /api/hockey/members/:appUserId`). Invalid fields get `400` with `{ errors: [{ message, path }] }`.
@@ -193,6 +194,14 @@ const leagueData = async (req: PayloadRequest, existing: HockeyFantasyLeague | n
     }
 
     const known = typeof fields.id === 'string' ? knownTeams.get(fields.id) : undefined
+    // A new team brought in from a shared league starts from its total so far, through that day
+    const start =
+      !known &&
+      isWhole(fields.points) &&
+      typeof fields.pointsThrough === 'string' &&
+      DAY.test(fields.pointsThrough)
+        ? { points: fields.points, pointsThrough: fields.pointsThrough }
+        : null
 
     teams.push({
       // A team it has keeps its ID and the points stored for it: the app doesn't send those
@@ -202,6 +211,19 @@ const leagueData = async (req: PayloadRequest, existing: HockeyFantasyLeague | n
             points: known.points ?? null,
             pointsLog: known.pointsLog ?? [],
             pointsThrough: known.pointsThrough ?? null,
+          }
+        : {}),
+      ...(start
+        ? {
+            points: start.points,
+            pointsLog: [
+              {
+                date: start.pointsThrough,
+                note: 'Starting total (shared league)',
+                points: start.points,
+              },
+            ],
+            pointsThrough: start.pointsThrough,
           }
         : {}),
       manager: text(fields.manager) ?? null,
@@ -273,6 +295,11 @@ const toAppLeague = (league: HockeyFantasyLeague) => ({
   })),
   updatedAt: league.updatedAt,
 })
+
+const DAY = /^\d{4}-\d{2}-\d{2}$/
+
+const isWhole = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isSafeInteger(value)
 
 const badRequest = (invalid: Invalid) => Response.json({ errors: [invalid] }, { status: 400 })
 
