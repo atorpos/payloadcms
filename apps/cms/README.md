@@ -39,6 +39,7 @@ uses to test templates.
 | `src/endpoints/appEvents.ts`               | Upcoming events for the VgemsAI app (see "The VgemsAI app")                            |
 | `src/endpoints/appProducts.ts`             | The catalog with prices, for the VgemsAI app (see "Products" under "The VgemsAI app")  |
 | `src/endpoints/appEventDiscovery.ts`       | Trade shows Claude finds every week (see "Events found by Claude")                     |
+| `src/collections/Companies.ts`, `…/EventExhibitors.ts`, `src/exhibitors/`, `src/endpoints/appExhibitorDiscovery.ts`, `src/endpoints/appCompanies.ts` | Companies exhibiting at events, from their official exhibitor lists (see "Exhibitors") |
 | `src/collections/PushNotifications.ts`, `src/endpoints/appPushNotifications.ts` | Push notifications to the VgemsAI app (see "Push notifications") |
 | `src/endpoints/appClients.ts`              | VgemsAI app signups as clients, and their Account screen (see "The VgemsAI app")       |
 | `src/endpoints/appChat.ts`                 | Saves VgemsAI app chats, deletes app accounts' data (see "The VgemsAI app")            |
@@ -166,6 +167,7 @@ nano .env
 | `OPENAI_API_KEY`, `OPENAI_MODEL`                            | optional, write the title, alt text, description and tags of photos with AI (see "Photos")                     |
 | `APPLE_MAPS_*`                                              | optional, team ID, key ID and private key to put events on the map with Apple Maps (see "Event locations")     |
 | `SENDGRID_API_KEY`, `EMAIL_FROM_ADDRESS`, `EMAIL_FROM_NAME` | optional, send "forgot password" emails (see "Email (SendGrid)")                                               |
+| `AWOZ_API_URL`                                              | optional, awoz-api's address, e.g. `https://api.example.com`: the app sees edits to Companies and Event exhibitors at once (see "Exhibitors") |
 
 URL-encode special characters in the MongoDB password: `@` → `%40`, `:` → `%3A`, `/` → `%2F`,
 `#` → `%23`, `?` → `%3F`.
@@ -921,6 +923,39 @@ An event counts as known when one starts within 60 days of it under the same nam
 name in the same city within 3 days. A found event is rejected, and awoz-api logs why, when it's over, starts more
 than 400 days ahead, lasts more than 31 days, has no city or country, or its time zone has no counterpart with the
 same UTC offset in `src/timezones.ts`.
+
+### Exhibitors
+
+awoz-api reads the official exhibitor lists of upcoming events, after its weekly event search and then daily, and
+saves who exhibits here (awoz-api README: "Exhibitor search"; off until `EXHIBITOR_DISCOVERY_ENABLED=true` there).
+Under **Business**:
+
+- **Companies**: one record per company, however many events it attends: name, other name (e.g. Chinese), other
+  names it's listed under, country, category, address, phone, email, website, the page it's from and when it was last
+  seen on a list. An empty field wasn't on the list; nothing is guessed. A company found again fills in empty fields
+  and never changes filled-in ones, so corrections stay; **Keep as entered** stops the search changing it at all.
+  **Review: Possible duplicate** marks companies found under a name like another's, or the same name in another
+  country, with the companies they may be (**May be the same as**): merge them by hand if they're the same (move the
+  event links to one, delete the other), then mark it **Checked**. Its **Events** tab lists where it exhibits.
+- **Event exhibitors**: which company exhibits at which event, once per event and company (a unique index), with the
+  name, booth and hall as the event lists them, the page it's on, when it was found and last seen. **Attendance**:
+  *Listed* (on the official list when last read), *Confirmed* (checked by you: the search then leaves the stand as
+  you entered it), *Withdrawn* (no longer on the list). Each event shows its exhibitors under **Exhibitors**.
+- On each event, **Exhibitor search** says how the last run went: status, the list it read (**Exhibitor list**:
+  enter an address to have that list read instead of searched for), how many it found and saved, and any problems.
+  **Don't search for exhibitors** skips the event.
+
+awoz-api calls, with `X-API-Key: <APP_API_KEY>` (`src/endpoints/appExhibitorDiscovery.ts`):
+`GET /api/app/exhibitor-discovery/events` (upcoming events and their search), `POST …/events/:id/claim` (takes an
+event for one run; `409` while another has it), `POST …/events/:id/exhibitors` (saves one page's exhibitors: matched
+to the companies here by `src/exhibitors/companyMatching.ts`) and `POST …/events/:id/status`. The app reads them
+through awoz-api from `GET /api/app/events/:id/exhibitors`, `GET /api/app/companies` and
+`GET /api/app/companies/:id` (`src/endpoints/appCompanies.ts`), which only answer the fields an exhibitor list
+publishes. awoz-api caches them; with `AWOZ_API_URL` set, saving or deleting a company or an exhibitor here tells it
+to drop its cache (`src/hooks/notifyAwozApi.ts`), so the app sees the change at once, otherwise within 10 minutes.
+
+The two collections are new: nothing to migrate. MongoDB creates their indexes when the CMS starts, and Events only
+gains fields that are empty until the first search. `pnpm test` runs the matching tests (`tests/`).
 
 ### Event locations
 

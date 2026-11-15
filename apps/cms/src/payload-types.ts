@@ -133,6 +133,8 @@ export type LexicalNodes_04AF6417 =
       | 'clients'
       | 'organizations'
       | 'events'
+      | 'companies'
+      | 'event-exhibitors'
       | 'chat-sessions'
       | 'chat-messages'
       | 'chat-reports'
@@ -187,6 +189,8 @@ export interface Config {
     clients: Client;
     organizations: Organization;
     events: Event;
+    companies: Company;
+    'event-exhibitors': EventExhibitor;
     'chat-sessions': ChatSession;
     'chat-messages': ChatMessage;
     'chat-reports': ChatReport;
@@ -215,6 +219,12 @@ export interface Config {
       events: 'events';
       chatSessions: 'chat-sessions';
     };
+    events: {
+      exhibitors: 'event-exhibitors';
+    };
+    companies: {
+      events: 'event-exhibitors';
+    };
     'chat-sessions': {
       messages: 'chat-messages';
     };
@@ -238,6 +248,8 @@ export interface Config {
     clients: ClientsSelect<false> | ClientsSelect<true>;
     organizations: OrganizationsSelect<false> | OrganizationsSelect<true>;
     events: EventsSelect<false> | EventsSelect<true>;
+    companies: CompaniesSelect<false> | CompaniesSelect<true>;
+    'event-exhibitors': EventExhibitorsSelect<false> | EventExhibitorsSelect<true>;
     'chat-sessions': ChatSessionsSelect<false> | ChatSessionsSelect<true>;
     'chat-messages': ChatMessagesSelect<false> | ChatMessagesSelect<true>;
     'chat-reports': ChatReportsSelect<false> | ChatReportsSelect<true>;
@@ -1020,6 +1032,35 @@ export interface Event {
    * Brochures, floor plans, photos
    */
   attachments?: (string | Media)[] | null;
+  /**
+   * Companies exhibiting, from the official exhibitor list (Event exhibitors)
+   */
+  exhibitors?: {
+    docs?: (string | EventExhibitor)[];
+    hasNextPage?: boolean;
+    totalDocs?: number;
+  };
+  /**
+   * awoz-api reads the event's official exhibitor list and adds its companies under Exhibitors.
+   */
+  exhibitorSearch?: {
+    status?: ('running' | 'found' | 'noDirectory' | 'unreadable' | 'failed') | null;
+    /**
+     * e.g. an event without exhibitors
+     */
+    skip?: boolean | null;
+    /**
+     * The official exhibitor list. Found by the search; enter it to have this list read instead.
+     */
+    directoryUrl?: string | null;
+    lastRunAt?: string | null;
+    found?: number | null;
+    saved?: number | null;
+    problems?: string | null;
+    resumeUrl?: string | null;
+    attempts?: number | null;
+    claimedUntil?: string | null;
+  };
   createdBy?: {
     relationTo: 'users';
     value: string | User;
@@ -1028,6 +1069,102 @@ export interface Event {
     relationTo: 'users';
     value: string | User;
   } | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "event-exhibitors".
+ */
+export interface EventExhibitor {
+  id: string;
+  event: string | Event;
+  company: string | Company;
+  /**
+   * The exhibitor’s name as the event lists it
+   */
+  listedName: string;
+  /**
+   * Booth or stand number, as listed
+   */
+  booth?: string | null;
+  /**
+   * Hall or exhibition zone, as listed
+   */
+  hall?: string | null;
+  attendanceStatus: 'listed' | 'confirmed' | 'withdrawn';
+  /**
+   * The exhibitor list page it was found on
+   */
+  sourceUrl?: string | null;
+  discoveredAt?: string | null;
+  lastVerifiedAt?: string | null;
+  foundBy?: 'claude' | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Exhibitors of trade shows, found on their official exhibitor lists. Empty fields were not on the list.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "companies".
+ */
+export interface Company {
+  id: string;
+  name: string;
+  /**
+   * The name in Chinese or another language, as listed
+   */
+  localName?: string | null;
+  /**
+   * Other names it is listed under. A company found under one of these names is this one.
+   */
+  aliases?: string[] | null;
+  /**
+   * In English, e.g. Hong Kong
+   */
+  country?: string | null;
+  /**
+   * Business category, as listed, e.g. Diamonds, Pearls
+   */
+  industry?: string | null;
+  address?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  website?: string | null;
+  /**
+   * The page these details are from
+   */
+  sourceUrl?: string | null;
+  /**
+   * When it was last seen on an exhibitor list
+   */
+  lastVerifiedAt?: string | null;
+  /**
+   * The events it exhibits at
+   */
+  events?: {
+    docs?: (string | EventExhibitor)[];
+    hasNextPage?: boolean;
+    totalDocs?: number;
+  };
+  /**
+   * Possible duplicate: found under a name like another company's, or the same name in another country. Merge them by hand if they are the same, then mark it Checked.
+   */
+  reviewStatus?: ('ok' | 'possibleDuplicate' | 'checked') | null;
+  possibleDuplicates?: (string | Company)[] | null;
+  /**
+   * The exhibitor search never changes this company
+   */
+  locked?: boolean | null;
+  /**
+   * Added by awoz-api's exhibitor search, from the event's exhibitor list
+   */
+  foundBy?: 'claude' | null;
+  matchName?: string | null;
+  matchNames?: string[] | null;
+  matchTokens?: string[] | null;
+  matchDomain?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -2007,6 +2144,14 @@ export interface PayloadLockedDocument {
         value: string | Event;
       } | null)
     | ({
+        relationTo: 'companies';
+        value: string | Company;
+      } | null)
+    | ({
+        relationTo: 'event-exhibitors';
+        value: string | EventExhibitor;
+      } | null)
+    | ({
         relationTo: 'chat-sessions';
         value: string | ChatSession;
       } | null)
@@ -2585,8 +2730,69 @@ export interface EventsSelect<T extends boolean = true> {
   status?: T;
   foundBy?: T;
   attachments?: T;
+  exhibitors?: T;
+  exhibitorSearch?:
+    | T
+    | {
+        status?: T;
+        skip?: T;
+        directoryUrl?: T;
+        lastRunAt?: T;
+        found?: T;
+        saved?: T;
+        problems?: T;
+        resumeUrl?: T;
+        attempts?: T;
+        claimedUntil?: T;
+      };
   createdBy?: T;
   updatedBy?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "companies_select".
+ */
+export interface CompaniesSelect<T extends boolean = true> {
+  name?: T;
+  localName?: T;
+  aliases?: T;
+  country?: T;
+  industry?: T;
+  address?: T;
+  phone?: T;
+  email?: T;
+  website?: T;
+  sourceUrl?: T;
+  lastVerifiedAt?: T;
+  events?: T;
+  reviewStatus?: T;
+  possibleDuplicates?: T;
+  locked?: T;
+  foundBy?: T;
+  matchName?: T;
+  matchNames?: T;
+  matchTokens?: T;
+  matchDomain?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "event-exhibitors_select".
+ */
+export interface EventExhibitorsSelect<T extends boolean = true> {
+  event?: T;
+  company?: T;
+  listedName?: T;
+  booth?: T;
+  hall?: T;
+  attendanceStatus?: T;
+  sourceUrl?: T;
+  discoveredAt?: T;
+  lastVerifiedAt?: T;
+  foundBy?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -4420,6 +4626,8 @@ export interface CollectionQueryWidget {
       | 'clients'
       | 'organizations'
       | 'events'
+      | 'companies'
+      | 'event-exhibitors'
       | 'chat-sessions'
       | 'chat-messages'
       | 'chat-reports'
@@ -4468,6 +4676,8 @@ export interface ActivityWidget {
           | 'clients'
           | 'organizations'
           | 'events'
+          | 'companies'
+          | 'event-exhibitors'
           | 'chat-sessions'
           | 'chat-messages'
           | 'chat-reports'

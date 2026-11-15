@@ -9,7 +9,8 @@ import { locateEvent } from '../hooks/locateEvent'
  *
  * The coordinates of each event's place come from Apple Maps when it's saved (../hooks/locateEvent.ts).
  * awoz-api adds the gem, jewellery and raw material trade shows Claude finds on the web every week
- * (../endpoints/appEventDiscovery.ts).
+ * (../endpoints/appEventDiscovery.ts), then reads their official exhibitor lists into Companies and
+ * Event exhibitors (../endpoints/appExhibitorDiscovery.ts); "Exhibitor search" shows how that went.
  */
 export const Events: CollectionConfig = {
   slug: 'events',
@@ -249,6 +250,99 @@ export const Events: CollectionConfig = {
       },
       hasMany: true,
       relationTo: 'media',
+    },
+    {
+      name: 'exhibitors',
+      type: 'join',
+      admin: {
+        defaultColumns: ['listedName', 'company', 'booth', 'hall', 'attendanceStatus'],
+        description: 'Companies exhibiting, from the official exhibitor list (Event exhibitors)',
+      },
+      collection: 'event-exhibitors',
+      defaultLimit: 50,
+      defaultSort: 'listedName',
+      on: 'event',
+    },
+    {
+      // awoz-api's exhibitor search (../endpoints/appExhibitorDiscovery.ts): how it went for this event
+      name: 'exhibitorSearch',
+      type: 'group',
+      admin: {
+        description:
+          "awoz-api reads the event's official exhibitor list and adds its companies under Exhibitors.",
+      },
+      label: 'Exhibitor search',
+      fields: [
+        {
+          type: 'row',
+          fields: [
+            {
+              name: 'status',
+              type: 'select',
+              admin: { readOnly: true },
+              options: [
+                { label: 'Reading the list', value: 'running' },
+                { label: 'Exhibitors found', value: 'found' },
+                { label: 'No exhibitor list yet', value: 'noDirectory' },
+                { label: "List can't be read (app, login or PDF)", value: 'unreadable' },
+                { label: 'Failed: tried again later', value: 'failed' },
+              ],
+            },
+            {
+              name: 'skip',
+              type: 'checkbox',
+              admin: { description: 'e.g. an event without exhibitors' },
+              label: "Don't search for exhibitors",
+            },
+          ],
+        },
+        {
+          name: 'directoryUrl',
+          type: 'text',
+          admin: {
+            description:
+              'The official exhibitor list. Found by the search; enter it to have this list read instead.',
+          },
+          label: 'Exhibitor list',
+          validate: (value: null | string | undefined) =>
+            !value || /^https?:\/\/\S+$/.test(value) || 'Enter a full URL, e.g. https://…',
+        },
+        {
+          type: 'row',
+          fields: [
+            {
+              name: 'lastRunAt',
+              type: 'date',
+              admin: { date: { pickerAppearance: 'dayAndTime' }, readOnly: true },
+              label: 'Last searched',
+            },
+            {
+              name: 'found',
+              type: 'number',
+              admin: { readOnly: true },
+              label: 'Exhibitors found',
+            },
+            {
+              name: 'saved',
+              type: 'number',
+              admin: { readOnly: true },
+              label: 'Saved',
+            },
+          ],
+        },
+        {
+          name: 'problems',
+          type: 'textarea',
+          admin: {
+            condition: (_data, siblingData) => Boolean(siblingData?.problems),
+            readOnly: true,
+          },
+        },
+        // Where to go on when the last run stopped early, its attempts, and which run holds it now
+        { name: 'resumeUrl', type: 'text', admin: { hidden: true } },
+        { name: 'attempts', type: 'number', admin: { hidden: true } },
+        { name: 'claimedUntil', type: 'date', admin: { hidden: true } },
+      ],
     },
   ],
 }
