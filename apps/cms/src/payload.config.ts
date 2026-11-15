@@ -10,6 +10,8 @@ import { ensureChatRetentionIndexes } from './collections/chatRetention'
 import { ChatReports } from './collections/ChatReports'
 import { ChatSessions } from './collections/ChatSessions'
 import { Clients } from './collections/Clients'
+import { Companies } from './collections/Companies'
+import { EventExhibitors } from './collections/EventExhibitors'
 import { Events } from './collections/Events'
 import { HockeyFantasyLeagues } from './collections/HockeyFantasyLeagues'
 import { HockeyFantasyTeams } from './collections/HockeyFantasyTeams'
@@ -38,9 +40,20 @@ import {
   appClientUpdateEndpoint,
 } from './endpoints/appClients'
 import {
+  appCompaniesEndpoint,
+  appCompanyEndpoint,
+  appEventExhibitorsEndpoint,
+} from './endpoints/appCompanies'
+import {
   appEventDiscoveryEndpoint,
   appEventDiscoverySaveEndpoint,
 } from './endpoints/appEventDiscovery'
+import {
+  appExhibitorDiscoveryClaimEndpoint,
+  appExhibitorDiscoveryEventsEndpoint,
+  appExhibitorDiscoverySaveEndpoint,
+  appExhibitorDiscoveryStatusEndpoint,
+} from './endpoints/appExhibitorDiscovery'
 import {
   appChatReportAppliedEndpoint,
   appChatReportsDecidedEndpoint,
@@ -214,6 +227,8 @@ export default buildConfig({
     Clients,
     Organizations,
     Events,
+    Companies,
+    EventExhibitors,
     ChatSessions,
     ChatMessages,
     ChatReports,
@@ -252,9 +267,16 @@ export default buildConfig({
     appClientByAccountEndpoint,
     appClientsEndpoint,
     appClientUpdateEndpoint,
+    appCompaniesEndpoint,
+    appCompanyEndpoint,
+    appEventExhibitorsEndpoint,
     appEventsEndpoint,
     appEventDiscoveryEndpoint,
     appEventDiscoverySaveEndpoint,
+    appExhibitorDiscoveryClaimEndpoint,
+    appExhibitorDiscoveryEventsEndpoint,
+    appExhibitorDiscoverySaveEndpoint,
+    appExhibitorDiscoveryStatusEndpoint,
     appMarketEndpoint,
     appMarketPricesEndpoint,
     appOrganizationDeleteEndpoint,
