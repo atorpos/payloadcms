@@ -2034,11 +2034,90 @@ export interface VigorNewsArticle {
   body?: string | null;
   image?: (string | null) | Media;
   /**
+   * Who made the picture and its licence, shown under it, e.g. "Photo: J. Smith, CC BY 4.0"
+   */
+  imageCredit?: string | null;
+  /**
+   * The picture’s page with its licence, e.g. on Wikimedia Commons
+   */
+  imageCreditUrl?: string | null;
+  /**
    * Used in the address on the website, the same in every language. Filled in from the title when left empty; don't change it once the page is live.
    */
   slug: string;
   date: string;
-  category: 'Technology' | 'Collections' | 'Company' | 'Sustainability';
+  category: 'Technology' | 'Collections' | 'Company' | 'Sustainability' | 'Market';
+  /**
+   * The price trend this article is about, as the price chart under it shows it.
+   */
+  market?: {
+    material?: (string | null) | MarketMaterial;
+    /**
+     * As the article names it, e.g. Gold
+     */
+    materialName?: string | null;
+    /**
+     * The week it covers, e.g. 2026-W47: the agent writes one article a week
+     */
+    week?: string | null;
+    periodStart?: string | null;
+    periodEnd?: string | null;
+    /**
+     * e.g. USD/oz
+     */
+    unit?: string | null;
+    startPrice?: number | null;
+    endPrice?: number | null;
+    changePercent?: number | null;
+    /**
+     * The weekly prices the chart shows: [{ "date": "2026-11-13", "price": 2650.5 }, …]
+     */
+    chart?:
+      | {
+          [k: string]: unknown;
+        }
+      | unknown[]
+      | string
+      | number
+      | boolean
+      | null;
+  };
+  /**
+   * The news pages the article draws on, listed under it
+   */
+  sources?:
+    | {
+        title: string;
+        publisher?: string | null;
+        /**
+         * e.g. 2026-11-14
+         */
+        publishedAt?: string | null;
+        url: string;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Products of this material offered online, each with its price as the store showed it on the day it was seen
+   */
+  deals?:
+    | {
+        product: string;
+        store: string;
+        price: number;
+        /**
+         * e.g. USD
+         */
+        currency: string;
+        seenAt: string;
+        url: string;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Drafted by awoz-api's market news agent: check the text, sources, deals and picture before publishing.
+   */
+  foundBy?: 'claude' | null;
   createdBy?: {
     relationTo: 'users';
     value: string | User;
@@ -3115,9 +3194,46 @@ export interface VigorNewsSelect<T extends boolean = true> {
   summary?: T;
   body?: T;
   image?: T;
+  imageCredit?: T;
+  imageCreditUrl?: T;
   slug?: T;
   date?: T;
   category?: T;
+  market?:
+    | T
+    | {
+        material?: T;
+        materialName?: T;
+        week?: T;
+        periodStart?: T;
+        periodEnd?: T;
+        unit?: T;
+        startPrice?: T;
+        endPrice?: T;
+        changePercent?: T;
+        chart?: T;
+      };
+  sources?:
+    | T
+    | {
+        title?: T;
+        publisher?: T;
+        publishedAt?: T;
+        url?: T;
+        id?: T;
+      };
+  deals?:
+    | T
+    | {
+        product?: T;
+        store?: T;
+        price?: T;
+        currency?: T;
+        seenAt?: T;
+        url?: T;
+        id?: T;
+      };
+  foundBy?: T;
   createdBy?: T;
   updatedBy?: T;
   updatedAt?: T;

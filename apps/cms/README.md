@@ -39,6 +39,7 @@ uses to test templates.
 | `src/endpoints/appEvents.ts`               | Upcoming events for the VgemsAI app (see "The VgemsAI app")                            |
 | `src/endpoints/appProducts.ts`             | The catalog with prices, for the VgemsAI app (see "Products" under "The VgemsAI app")  |
 | `src/endpoints/appEventDiscovery.ts`       | Trade shows Claude finds every week (see "Events found by Claude")                     |
+| `src/endpoints/appMarketNews.ts`           | Weekly market articles awoz-api drafts in Vigor website → News (see "Market news")    |
 | `src/collections/Companies.ts`, `…/EventExhibitors.ts`, `src/exhibitors/`, `src/endpoints/appExhibitorDiscovery.ts`, `src/endpoints/appCompanies.ts` | Companies exhibiting at events, from their official exhibitor lists (see "Exhibitors") |
 | `src/collections/PushNotifications.ts`, `src/endpoints/appPushNotifications.ts` | Push notifications to the VgemsAI app (see "Push notifications") |
 | `src/endpoints/appClients.ts`              | VgemsAI app signups as clients, and their Account screen (see "The VgemsAI app")       |
@@ -168,6 +169,7 @@ nano .env
 | `APPLE_MAPS_*`                                              | optional, team ID, key ID and private key to put events on the map with Apple Maps (see "Event locations")     |
 | `SENDGRID_API_KEY`, `EMAIL_FROM_ADDRESS`, `EMAIL_FROM_NAME` | optional, send "forgot password" emails (see "Email (SendGrid)")                                               |
 | `AWOZ_API_URL`                                              | optional, awoz-api's address, e.g. `https://api.example.com`: the app sees edits to Companies and Event exhibitors at once (see "Exhibitors") |
+| `MARKET_NEWS_IMAGE_HOSTS`                                   | optional, where market news photos may be downloaded from, comma-separated; `upload.wikimedia.org` by default (see "Market news") |
 
 URL-encode special characters in the MongoDB password: `@` → `%40`, `:` → `%3A`, `/` → `%2F`,
 `#` → `%23`, `?` → `%3F`.
@@ -767,6 +769,30 @@ ones to keep. Drafts aren't on the website, so nothing changes there until you p
 
 The stones' names aren't translated yet: on the Spanish, French and Chinese pages they show in English
 until they're added to the `glossary` in the website's `shared/i18n/*.json`.
+
+### Market news
+
+Every Monday awoz-api drafts an article on the raw material whose price moved most the week before (awoz-api README:
+"Market news"; off until `MARKET_NEWS_ENABLED=true` there), saved here as a **draft** in **Vigor website → News** with
+the category **Market** and **Written by: Claude (market news agent)**. Nothing shows on the website or in the app until
+it's published.
+
+To review one, filter News by Category: Market, open the draft and check:
+
+- the title, summary and text, against the **Sources** (the news pages Claude read; only pages it really saw are kept);
+- **Market**: the material, the week's prices and change, and the chart's weekly prices (from our market data, as
+  when it was written: the chart doesn't change later);
+- **Deals**: offers of jewellery and bullion, each with its price as the store's page showed it on **Seen on**
+  (only those whose name and price were on the page Claude read are kept). Delete any you don't want to show;
+- the photo, from Wikimedia Commons, and its **Picture credit** and **Credit link**, which its licence asks for.
+
+Then **Publish**. The website shows it at `/news/<slug>` with the price chart, the deals and the sources; the VgemsAI
+app's Research tab within 5 minutes. Translate it like any news article (next section).
+
+awoz-api calls, with `X-API-Key: <APP_API_KEY>` (`src/endpoints/appMarketNews.ts`): `GET /api/app/market-news/weeks/:week`
+(has the week its article?), `POST /api/app/market-news` (saves a draft; downloads the photo, only from
+`MARKET_NEWS_IMAGE_HOSTS`), and for the app `GET /api/app/market-news` and `GET /api/app/market-news/:slug` (published
+only). The new fields of News are only for Market articles and stay empty on the others: nothing to migrate.
 
 ### Translating the Vigor website with Claude
 
