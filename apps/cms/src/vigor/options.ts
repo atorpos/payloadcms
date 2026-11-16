@@ -142,7 +142,14 @@ export const units = options(['piece', 'pair', 'parcel', 'strand'])
 
 export const badges = options(['New', 'Best seller'])
 
-export const newsCategories = options(['Technology', 'Collections', 'Company', 'Sustainability'])
+/** Market: the weekly raw material articles awoz-api's market news agent drafts (../endpoints/appMarketNews.ts) */
+export const newsCategories = options([
+  'Technology',
+  'Collections',
+  'Company',
+  'Sustainability',
+  'Market',
+])
 
 /** Icons of the highlights and features on the VgemsAI app page; the website draws each one */
 export const appIcons = [

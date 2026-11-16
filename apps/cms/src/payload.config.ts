@@ -62,6 +62,12 @@ import {
 import { appEventsEndpoint } from './endpoints/appEvents'
 import { appMarketEndpoint, appMarketPricesEndpoint } from './endpoints/appMarket'
 import {
+  appMarketNewsArticleEndpoint,
+  appMarketNewsListEndpoint,
+  appMarketNewsSaveEndpoint,
+  appMarketNewsWeekEndpoint,
+} from './endpoints/appMarketNews'
+import {
   appOrganizationDeleteEndpoint,
   appOrganizationSaveEndpoint,
 } from './endpoints/appOrganizations'
@@ -279,6 +285,10 @@ export default buildConfig({
     appExhibitorDiscoveryStatusEndpoint,
     appMarketEndpoint,
     appMarketPricesEndpoint,
+    appMarketNewsWeekEndpoint,
+    appMarketNewsListEndpoint,
+    appMarketNewsArticleEndpoint,
+    appMarketNewsSaveEndpoint,
     appOrganizationDeleteEndpoint,
     appOrganizationSaveEndpoint,
     appProductsEndpoint,
