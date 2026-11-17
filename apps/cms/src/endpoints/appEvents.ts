@@ -60,14 +60,17 @@ export const appEventsEndpoint: Endpoint = {
         name: true,
         type: true,
         description: true,
+        edition: true,
         endDate: true,
         endDate_tz: true,
+        exhibitorSearch: { directoryUrl: true },
         location: true,
         organizer: true,
         startDate: true,
         startDate_tz: true,
         status: true,
         website: true,
+        websiteCheck: { status: true },
       },
       sort: 'startDate',
       where,
@@ -87,6 +90,7 @@ const toAppEvent = (event: Partial<Event>) => ({
   name: event.name,
   type: event.type,
   description: event.description ?? null,
+  edition: event.edition ?? null,
   endDate: event.endDate ?? null,
   endDate_tz: event.endDate ? (event.endDate_tz ?? null) : null,
   location: {
@@ -102,6 +106,12 @@ const toAppEvent = (event: Partial<Event>) => ({
   startDate_tz: event.startDate_tz,
   status: event.status,
   website: event.website ?? null,
+  // The exhibitor search checked that the website is this edition's, or the team entered it
+  websiteVerified: Boolean(
+    event.website &&
+    (event.websiteCheck?.status === 'verified' || event.websiteCheck?.status === 'team'),
+  ),
+  exhibitorListUrl: event.exhibitorSearch?.directoryUrl ?? null,
 })
 
 /** Where the app puts the event's pin, and how precise it is */

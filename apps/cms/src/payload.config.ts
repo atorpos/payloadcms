@@ -42,6 +42,7 @@ import {
 import {
   appCompaniesEndpoint,
   appCompanyEndpoint,
+  appCompanyEventsEndpoint,
   appEventExhibitorsEndpoint,
 } from './endpoints/appCompanies'
 import {
@@ -50,6 +51,8 @@ import {
 } from './endpoints/appEventDiscovery'
 import {
   appExhibitorDiscoveryClaimEndpoint,
+  appExhibitorDiscoveryCompaniesEndpoint,
+  appExhibitorDiscoveryEnrichmentEndpoint,
   appExhibitorDiscoveryEventsEndpoint,
   appExhibitorDiscoverySaveEndpoint,
   appExhibitorDiscoveryStatusEndpoint,
@@ -275,11 +278,14 @@ export default buildConfig({
     appClientUpdateEndpoint,
     appCompaniesEndpoint,
     appCompanyEndpoint,
+    appCompanyEventsEndpoint,
     appEventExhibitorsEndpoint,
     appEventsEndpoint,
     appEventDiscoveryEndpoint,
     appEventDiscoverySaveEndpoint,
     appExhibitorDiscoveryClaimEndpoint,
+    appExhibitorDiscoveryCompaniesEndpoint,
+    appExhibitorDiscoveryEnrichmentEndpoint,
     appExhibitorDiscoveryEventsEndpoint,
     appExhibitorDiscoverySaveEndpoint,
     appExhibitorDiscoveryStatusEndpoint,

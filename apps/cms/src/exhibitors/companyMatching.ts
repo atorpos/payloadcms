@@ -3,11 +3,12 @@
  * (../collections/Companies.ts), and what it may add to it. Pure functions, used by
  * ../endpoints/appExhibitorDiscovery.ts.
  *
- * A match is only certain when the two share their website's domain, or their name (also an alias or
- * the local name) once legal forms such as "Co., Ltd." or "有限公司" are left out, and their countries
- * agree (or one is unknown). Anything less certain, e.g. similar names or the same name in another
- * country, is a *possible* duplicate: a new company is made and flagged for the team to review, never
- * merged by itself.
+ * A match is only certain when the two share their name (also an alias or the local name) once legal
+ * forms such as "Co., Ltd." or "有限公司" are left out, or share their website's domain and have alike
+ * names, and their countries agree (or one is unknown). A shared domain alone isn't enough: several
+ * companies of a group can share one website. Anything less certain, e.g. similar names, the same
+ * website under another name, or the same name in another country, is a *possible* duplicate: a new
+ * company is made and flagged for the team to review, never merged by itself.
  */
 
 /** Legal forms and filler that don't tell two companies apart */
@@ -266,6 +267,7 @@ export type MatchableCompany = {
   aliases?: null | string[]
   country?: null | string
   id: string
+  legalName?: null | string
   localName?: null | string
   name: string
   website?: null | string
@@ -277,9 +279,11 @@ export type Match =
   | { kind: 'none' }
 
 /** All the names a company goes by, normalized */
-const allNames = (company: Pick<MatchableCompany, 'aliases' | 'localName' | 'name'>) =>
+const allNames = (
+  company: Pick<MatchableCompany, 'aliases' | 'legalName' | 'localName' | 'name'>,
+) =>
   new Set(
-    [company.name, company.localName, ...(company.aliases ?? [])]
+    [company.name, company.localName, company.legalName, ...(company.aliases ?? [])]
       .map(normalizeName)
       .filter((name) => name.length > 0),
   )
@@ -306,6 +310,27 @@ export const nameSimilarity = (a: string, b: string): number => {
 
 /** Names this alike, in the same country, may be the same company: the team decides */
 const POSSIBLE_SIMILARITY = 0.6
+/** Names this alike, on the same website, are the same company */
+const SAME_SITE_SIMILARITY = 0.75
+
+/**
+ * Whether two normalized names on the same website are the same company: one's words are all in the
+ * other ("wing fat" and "wing fat jewelry"), or they're nearly the same. "chow tai fook jewelry" and
+ * "chow tai fook enterprises" aren't: two companies of one group.
+ */
+export const namesAlike = (a: string, b: string): boolean => {
+  const first = a.split(' ').filter(Boolean)
+  const second = b.split(' ').filter(Boolean)
+
+  if (!first.length || !second.length) {
+    return false
+  }
+
+  const [shorter, longer] = first.length <= second.length ? [first, second] : [second, first]
+  const words = new Set(longer)
+
+  return shorter.every((word) => words.has(word)) || nameSimilarity(a, b) >= SAME_SITE_SIMILARITY
+}
 
 /**
  * Whether the exhibitor is one of the candidate companies. "same" only when exactly one candidate is
@@ -325,11 +350,15 @@ export const matchCompany = (
     const candidateNames = allNames(candidate)
     const sameName = [...names].some((name) => candidateNames.has(name))
     const agree = countriesAgree(exhibitor.country, candidate.country)
+    const alike = [...names].some((name) =>
+      [...candidateNames].some((other) => namesAlike(name, other)),
+    )
 
-    if ((sameDomain || sameName) && agree) {
+    if (agree && (sameName || (sameDomain && alike))) {
       same.push(candidate)
     } else if (sameDomain || sameName) {
-      // e.g. the same name in another country: a branch, or another company altogether
+      // The same name in another country (a branch, or another company altogether), or the same
+      // website under another name (one company of a group that shares it)
       possible.push(candidate)
     } else if (
       agree &&
@@ -351,46 +380,89 @@ export const matchCompany = (
   return { kind: 'none' }
 }
 
-/** The fields an exhibitor list can tell about a company */
-export const ENRICHABLE_FIELDS = [
+/** The text fields an exhibitor list, its profile pages or the company's website can tell */
+export const TEXT_FIELDS = [
   'localName',
+  'legalName',
   'country',
+  'city',
   'address',
   'phone',
   'email',
   'website',
-  'industry',
+  'description',
+  'contactPageUrl',
+  'linkedinUrl',
+  'instagramUrl',
+  'facebookUrl',
 ] as const
 
-export type CompanyDetails = Partial<Record<(typeof ENRICHABLE_FIELDS)[number], null | string>> & {
-  aliases?: null | string[]
-  name: string
-}
+/** The fields that are lists: categories, and other official social media pages */
+export const LIST_FIELDS = ['industry', 'otherLinks'] as const
+
+export const ENRICHABLE_FIELDS = [...TEXT_FIELDS, ...LIST_FIELDS] as const
+
+export type TextField = (typeof TEXT_FIELDS)[number]
+export type ListField = (typeof LIST_FIELDS)[number]
+export type EnrichableField = (typeof ENRICHABLE_FIELDS)[number]
+
+/** At most this many categories or other links */
+export const MAX_LIST_ITEMS = 10
+
+export type CompanyDetails = Partial<Record<ListField, null | string[]>> &
+  Partial<Record<TextField, null | string>> & {
+    aliases?: null | string[]
+    name: string
+  }
 
 /**
- * What a newly found exhibitor adds to an existing company: only fields the company doesn't have
- * yet, never a different value over one it has (those are listed in `conflicts`), and the name as
- * an alias when it's another name.
+ * What a newly found exhibitor adds to an existing company: fields the company doesn't have yet, and
+ * categories or links it doesn't list yet; never a different value over one it has (those are listed
+ * in `conflicts`), and nothing in a field the team edited (`curated`). The name becomes an alias when
+ * it's another name. `filled` are the fields the patch sets, whose source is then recorded.
  */
 export const enrichment = (
   existing: CompanyDetails,
   found: CompanyDetails,
-): { conflicts: string[]; patch: Partial<CompanyDetails> } => {
+  curated: readonly string[] = [],
+): { conflicts: string[]; filled: EnrichableField[]; patch: Partial<CompanyDetails> } => {
   const patch: Partial<CompanyDetails> = {}
   const conflicts: string[] = []
+  const filled: EnrichableField[] = []
+  const kept = new Set(curated)
 
-  for (const field of ENRICHABLE_FIELDS) {
+  for (const field of TEXT_FIELDS) {
     const value = found[field]?.trim()
     const current = existing[field]?.trim()
 
-    if (!value) {
+    if (!value || kept.has(field)) {
       continue
     }
     if (!current) {
       patch[field] = value
+      filled.push(field)
     } else if (!sameValue(field, current, value)) {
       conflicts.push(field)
     }
+  }
+
+  for (const field of LIST_FIELDS) {
+    const current = (existing[field] ?? []).filter(Boolean)
+    const known = new Set(current.map((item) => listKey(field, item)))
+    const added = (found[field] ?? [])
+      .map((item) => item?.trim())
+      .filter((item): item is string => Boolean(item) && !known.has(listKey(field, item!)))
+
+    if (!added.length || kept.has(field) || current.length >= MAX_LIST_ITEMS) {
+      continue
+    }
+    const unique = added.filter(
+      (item, index) =>
+        added.findIndex((other) => listKey(field, other) === listKey(field, item)) === index,
+    )
+
+    patch[field] = [...current, ...unique].slice(0, MAX_LIST_ITEMS)
+    filled.push(field)
   }
 
   const knownNames = allNames(existing)
@@ -399,7 +471,94 @@ export const enrichment = (
     patch.aliases = [...(existing.aliases ?? []), found.name.trim()].slice(-20)
   }
 
-  return { conflicts, patch }
+  return { conflicts, filled, patch }
+}
+
+/** A category or a link as it's compared */
+const listKey = (field: ListField, item: string) =>
+  field === 'otherLinks' ? urlKey(item) : item.normalize('NFKC').toLowerCase()
+
+/** "https://www.LinkedIn.com/company/wingfat/" and "linkedin.com/company/wingfat" are the same page */
+export const urlKey = (url: string) =>
+  url
+    .trim()
+    .toLowerCase()
+    .replace(/^https?:\/\//, '')
+    .replace(/^www\./, '')
+    .replace(/[?#].*$/, '')
+    .replace(/\/+$/, '')
+
+/** Where a field's value is from (Companies → Sources) */
+export type SourceKind =
+  | 'companyWebsite'
+  | 'exhibitorList'
+  | 'exhibitorProfile'
+  | 'team'
+  | 'webSearch'
+
+export type FieldSource = {
+  confidence?: 'high' | 'medium' | null
+  field: string
+  id?: null | string
+  seenAt?: null | string
+  sourceKind: SourceKind
+  sourceUrl?: null | string
+}
+
+/** At most this many sources are kept; a field's newest replaces its older one */
+export const MAX_FIELD_SOURCES = 40
+
+/** The company's sources, with those of `fields` now from `source` */
+export const withSources = (
+  current: FieldSource[] | null | undefined,
+  fields: readonly string[],
+  source: Omit<FieldSource, 'field'>,
+): FieldSource[] => {
+  const changed = new Set(fields)
+  const kept = (current ?? [])
+    .filter((entry) => !changed.has(entry.field))
+    .map(({ id: _id, ...entry }) => entry)
+
+  return [...kept, ...fields.map((field) => ({ ...source, field }))].slice(-MAX_FIELD_SOURCES)
+}
+
+/**
+ * The fields the team changed in an edit, emptied ones included: the exhibitor search then leaves
+ * them as they are. Text is compared trimmed, so an untouched empty field isn't a change.
+ */
+export const changedFields = (
+  before: Partial<Record<string, unknown>> | null | undefined,
+  after: Partial<Record<string, unknown>>,
+): EnrichableField[] =>
+  ENRICHABLE_FIELDS.filter(
+    (field) => field in after && comparable(before?.[field]) !== comparable(after[field]),
+  )
+
+const comparable = (value: unknown): string => {
+  if (Array.isArray(value)) {
+    return JSON.stringify(value.map((item) => String(item).trim()).filter(Boolean))
+  }
+  return typeof value === 'string' ? JSON.stringify(value.trim() ? [value.trim()] : []) : '[]'
+}
+
+/** "Diamonds, Pearls; Gold" as a list of categories */
+export const categories = (value: unknown): string[] => {
+  const items = Array.isArray(value) ? value : typeof value === 'string' ? [value] : []
+  const kept = new Map<string, string>()
+
+  for (const item of items.flatMap((entry) =>
+    typeof entry === 'string' ? entry.split(/\s*[,;，、|]\s*/) : [],
+  )) {
+    const category = item.trim().replace(/\s+/g, ' ').slice(0, 200)
+    const key = category.normalize('NFKC').toLowerCase()
+
+    // The first spelling of a repeated category is kept
+    if (category && !kept.has(key)) {
+      kept.set(key, category)
+    }
+  }
+
+  return [...kept.values()].slice(0, MAX_LIST_ITEMS)
 }
 
 const sameValue = (field: string, a: string, b: string) => {
@@ -412,6 +571,11 @@ const sameValue = (field: string, a: string, b: string) => {
       return a.replace(/\D/g, '') === b.replace(/\D/g, '')
     case 'website':
       return websiteDomain(a) === websiteDomain(b)
+    case 'contactPageUrl':
+    case 'facebookUrl':
+    case 'instagramUrl':
+    case 'linkedinUrl':
+      return urlKey(a) === urlKey(b)
     default:
       return a.normalize('NFKC').toLowerCase() === b.normalize('NFKC').toLowerCase()
   }
