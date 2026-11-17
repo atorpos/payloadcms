@@ -10,6 +10,10 @@ import { notifyAwozApiAfterChange, notifyAwozApiAfterDelete } from '../hooks/not
  *
  * Attendance: "Listed" was on the official list when last read; "Confirmed" the team checked it, and
  * the search then leaves the stand as entered; "Withdrawn" no longer on the list, or cancelled.
+ *
+ * The event is one edition of a show, so these records are the company's history of editions: a
+ * company that's no longer listed is marked withdrawn (when), never removed, and listed again if it
+ * comes back.
  */
 export const EventExhibitors: CollectionConfig = {
   slug: 'event-exhibitors',
@@ -96,11 +100,23 @@ export const EventExhibitors: CollectionConfig = {
       required: true,
     },
     {
-      name: 'sourceUrl',
-      type: 'text',
-      admin: { description: 'The exhibitor list page it was found on' },
-      label: 'Source',
-      maxLength: 1000,
+      type: 'row',
+      fields: [
+        {
+          name: 'sourceUrl',
+          type: 'text',
+          admin: { description: 'The exhibitor list page it was found on' },
+          label: 'Source',
+          maxLength: 1000,
+        },
+        {
+          name: 'detailUrl',
+          type: 'text',
+          admin: { description: "The exhibitor's own page on the list, if it has one" },
+          label: 'Profile page',
+          maxLength: 1000,
+        },
+      ],
     },
     {
       type: 'row',
@@ -116,6 +132,16 @@ export const EventExhibitors: CollectionConfig = {
           type: 'date',
           admin: { date: { pickerAppearance: 'dayAndTime' } },
           label: 'Last seen on the list',
+        },
+        {
+          name: 'withdrawnAt',
+          type: 'date',
+          admin: {
+            condition: (data) => data?.attendanceStatus === 'withdrawn',
+            date: { pickerAppearance: 'dayAndTime' },
+            readOnly: true,
+          },
+          label: 'No longer listed since',
         },
       ],
     },

@@ -2,6 +2,8 @@ import type { Endpoint, PayloadRequest, Where } from 'payload'
 
 import type { Company, Event, EventExhibitor } from '../payload-types'
 
+import { categories } from '../exhibitors/companyMatching'
+import { localDay } from '../zonedTime'
 import { refuseWithoutAppApiKey } from './appApiKey'
 
 /**
@@ -12,21 +14,38 @@ import { refuseWithoutAppApiKey } from './appApiKey'
  *   GET /api/app/events/:id/exhibitors   an event's exhibitors, with their companies
  *   GET /api/app/companies               the company catalog
  *   GET /api/app/companies/:id           a company and its events
+ *   GET /api/app/companies/:id/events    the editions it exhibited at, newest first, page by page
  *
- * Only what an exhibitor list publishes leaves the CMS (name, other name, country, address, phone,
- * email, website, category, source): never the review fields, aliases or who added it. Lists take
- * `page` (from 1) and `limit` (1 to 100, 50 by default) and answer as Payload's REST API does:
+ * Only what an exhibitor list or the company's website publishes leaves the CMS (names, country, city,
+ * address, phone, email, website, contact page, social media, categories, description, source): never
+ * the review fields, sources, suggestions, aliases or who added it. Lists take `page` (from 1),
+ * `limit` (1 to 100, 50 by default) and `sort` (see each), and answer as Payload's REST API does:
  * `{ docs, totalDocs, page, limit, totalPages, hasNextPage }`.
  */
+
+/** The orders a list can be sorted in, and Payload's sort for each */
+const COMPANY_SORTS: Record<string, string[]> = {
+  '-lastVerifiedAt': ['-lastVerifiedAt', 'name'],
+  '-name': ['-name'],
+  country: ['country', 'name'],
+  name: ['name'],
+}
+const EXHIBITOR_SORTS: Record<string, string[]> = {
+  '-listedName': ['-listedName'],
+  booth: ['booth', 'listedName'],
+  listedName: ['listedName'],
+}
 
 const MAX_LIMIT = 100
 
 /**
- * `GET /api/app/events/:id/exhibitors?search=&country=&hall=&page=&limit=` - who exhibits, by listed
- * name; `search` looks in the listed and company names and the booth; withdrawn exhibitors are left
- * out. Also answers the event, and each country with how many exhibitors, for a country filter:
+ * `GET /api/app/events/:id/exhibitors?search=&country=&hall=&sort=&page=&limit=` - who exhibits, by
+ * listed name (`sort`: listedName, -listedName or booth); `search` looks in the listed and company
+ * names and the booth; withdrawn exhibitors are left out. Also answers the event, and each country
+ * with how many exhibitors, for a country filter:
  *
- *   { event: { id, name }, docs: [{ id, listedName, booth, hall, attendanceStatus, company: {…} }],
+ *   { event: { id, name, edition, exhibitorListUrl }, docs: [{ id, listedName, booth, hall,
+ *     attendanceStatus, discoveredAt, lastVerifiedAt, company: {…} }],
  *     countries: [{ country: "Hong Kong", count: 120 }], totalDocs, page, … }
  */
 export const appEventExhibitorsEndpoint: Endpoint = {
@@ -76,7 +95,7 @@ export const appEventExhibitorsEndpoint: Endpoint = {
       limit,
       overrideAccess: true,
       page,
-      sort: 'listedName',
+      sort: EXHIBITOR_SORTS[param(req, 'sort') ?? ''] ?? EXHIBITOR_SORTS.listedName,
       where: { and: filters },
     })
 
@@ -87,7 +106,12 @@ export const appEventExhibitorsEndpoint: Endpoint = {
         ...publicLink(exhibitor),
         company: publicCompany(exhibitor.company as Company),
       })),
-      event: { id: event.id, name: event.name },
+      event: {
+        id: event.id,
+        name: event.name,
+        edition: event.edition ?? null,
+        exhibitorListUrl: event.exhibitorSearch?.directoryUrl ?? null,
+      },
     })
   },
   method: 'get',
@@ -95,9 +119,9 @@ export const appEventExhibitorsEndpoint: Endpoint = {
 }
 
 /**
- * `GET /api/app/companies?search=&country=&industry=&event=&page=&limit=` - companies by name; `search`
- * looks in the name, other name and website, `industry` in the category, and `event` keeps those
- * exhibiting at that event.
+ * `GET /api/app/companies?search=&country=&industry=&event=&sort=&page=&limit=` - companies by name
+ * (`sort`: name, -name, country or -lastVerifiedAt); `search` looks in the names and website,
+ * `industry` in the categories, and `event` keeps those exhibiting at that event.
  */
 export const appCompaniesEndpoint: Endpoint = {
   handler: async (req) => {
@@ -118,6 +142,7 @@ export const appCompaniesEndpoint: Endpoint = {
         or: [
           { name: { like: search } },
           { localName: { like: search } },
+          { legalName: { like: search } },
           { website: { like: search } },
         ],
       })
@@ -150,7 +175,7 @@ export const appCompaniesEndpoint: Endpoint = {
       limit,
       overrideAccess: true,
       page,
-      sort: 'name',
+      sort: COMPANY_SORTS[param(req, 'sort') ?? ''] ?? COMPANY_SORTS.name,
       where: filters.length ? { and: filters } : {},
     })
 
@@ -164,8 +189,9 @@ export const appCompaniesEndpoint: Endpoint = {
  * `GET /api/app/companies/:id` - the company and the events it exhibits at, soonest first, withdrawn
  * and cancelled ones left out:
  *
- *   { company: {…}, events: [{ id, name, startDate, startDate_tz, endDate, city, country, website,
- *                              listedName, booth, hall, attendanceStatus }] }
+ *   { company: {…}, events: [{ id, name, edition, startDate, startDate_tz, endDate, city, country,
+ *                              website, listedName, booth, hall, attendanceStatus, discoveredAt,
+ *                              lastVerifiedAt }] }
  */
 export const appCompanyEndpoint: Endpoint = {
   handler: async (req) => {
@@ -197,17 +223,7 @@ export const appCompanyEndpoint: Endpoint = {
       .map((link) => ({ event: link.event as Event, link }))
       .filter(({ event }) => event && typeof event === 'object' && event.status !== 'cancelled')
       .sort((a, b) => Date.parse(a.event.startDate) - Date.parse(b.event.startDate))
-      .map(({ event, link }) => ({
-        id: event.id,
-        name: event.name,
-        ...publicLink(link),
-        city: event.location?.city ?? null,
-        country: event.location?.country ?? null,
-        endDate: event.endDate ?? null,
-        startDate: event.startDate,
-        startDate_tz: event.startDate_tz ?? null,
-        website: event.website ?? null,
-      }))
+      .map(({ event, link }) => companyEvent(event, link))
 
     return Response.json({ company: publicCompany(company), events })
   },
@@ -215,30 +231,141 @@ export const appCompanyEndpoint: Endpoint = {
   path: '/app/companies/:id',
 }
 
-/** Copies only the public fields, so a field added to Companies later never leaks by accident */
-const publicCompany = (company: Company) => ({
-  id: company.id,
-  name: company.name,
-  address: company.address ?? null,
-  country: company.country ?? null,
-  email: company.email ?? null,
-  industry: company.industry ?? null,
-  lastVerifiedAt: company.lastVerifiedAt ?? null,
-  localName: company.localName ?? null,
-  phone: company.phone ?? null,
-  sourceUrl: company.sourceUrl ?? null,
-  updatedAt: company.updatedAt,
-  website: company.website ?? null,
+/**
+ * `GET /api/app/companies/:id/events?page=&limit=` - the editions the company exhibited at, newest
+ * first, past ones included: its history. Withdrawn and cancelled ones are left out.
+ *
+ *   { company: { id, name }, docs: [{ id, name, edition, startDate, …, discoveredAt, lastVerifiedAt }],
+ *     totalDocs, page, … }
+ */
+export const appCompanyEventsEndpoint: Endpoint = {
+  handler: async (req) => {
+    const refused = refuseWithoutAppApiKey(req)
+
+    if (refused) {
+      return refused
+    }
+
+    const company = await findById<Company>(req, 'companies')
+
+    if (!company) {
+      return notFound('Company')
+    }
+
+    // A company exhibits at a few dozen editions at most: all of them, then the page asked for
+    const { docs: links } = await req.payload.find({
+      collection: 'event-exhibitors',
+      depth: 1,
+      overrideAccess: true,
+      pagination: false,
+      populate: {
+        events: {
+          name: true,
+          edition: true,
+          endDate: true,
+          endDate_tz: true,
+          location: true,
+          startDate: true,
+          startDate_tz: true,
+          status: true,
+          website: true,
+        },
+      },
+      where: {
+        and: [
+          { company: { equals: company.id } },
+          { attendanceStatus: { not_equals: 'withdrawn' } },
+        ],
+      },
+    })
+    const all = links
+      .map((link) => ({ event: link.event as Event, link }))
+      .filter(({ event }) => event && typeof event === 'object' && event.status !== 'cancelled')
+      .sort((a, b) => Date.parse(b.event.startDate) - Date.parse(a.event.startDate))
+    const { limit, page } = paging(req)
+    const totalPages = Math.max(1, Math.ceil(all.length / limit))
+    const docs = all
+      .slice((page - 1) * limit, page * limit)
+      .map(({ event, link }) => companyEvent(event, link))
+    const result = {
+      hasNextPage: page < totalPages,
+      limit,
+      page,
+      totalDocs: all.length,
+      totalPages,
+    }
+
+    return Response.json({
+      ...pageOf(result),
+      company: { id: company.id, name: company.name },
+      docs,
+    })
+  },
+  method: 'get',
+  path: '/app/companies/:id/events',
+}
+
+/** An edition the company exhibits at, with its stand and when the search saw it there */
+const companyEvent = (event: Event, link: EventExhibitor) => ({
+  id: event.id,
+  name: event.name,
+  ...publicLink(link),
+  city: event.location?.city ?? null,
+  country: event.location?.country ?? null,
+  edition:
+    event.edition ??
+    (event.startDate ? localDay(event.startDate, event.startDate_tz || 'UTC').slice(0, 4) : null),
+  endDate: event.endDate ?? null,
+  startDate: event.startDate,
+  startDate_tz: event.startDate_tz ?? null,
+  website: event.website ?? null,
 })
+
+/** Copies only the public fields, so a field added to Companies later never leaks by accident */
+const publicCompany = (company: Company) => {
+  const industries = categories(company.industry)
+
+  return {
+    id: company.id,
+    name: company.name,
+    address: textOrNull(company.address),
+    city: textOrNull(company.city),
+    contactPageUrl: textOrNull(company.contactPageUrl),
+    country: textOrNull(company.country),
+    description: textOrNull(company.description),
+    email: textOrNull(company.email),
+    facebookUrl: textOrNull(company.facebookUrl),
+    industries,
+    // As text, for app versions that show one category line
+    industry: industries.length ? industries.join(', ') : null,
+    instagramUrl: textOrNull(company.instagramUrl),
+    lastVerifiedAt: textOrNull(company.lastVerifiedAt),
+    legalName: textOrNull(company.legalName),
+    linkedinUrl: textOrNull(company.linkedinUrl),
+    localName: textOrNull(company.localName),
+    otherLinks: (company.otherLinks ?? []).filter((link) => textOrNull(link)),
+    phone: textOrNull(company.phone),
+    sourceUrl: textOrNull(company.sourceUrl),
+    updatedAt: company.updatedAt,
+    website: textOrNull(company.website),
+  }
+}
 
 const publicLink = (link: EventExhibitor) => ({
   attendanceStatus: link.attendanceStatus,
-  booth: link.booth ?? null,
-  hall: link.hall ?? null,
+  booth: textOrNull(link.booth),
+  detailUrl: textOrNull(link.detailUrl),
+  discoveredAt: textOrNull(link.discoveredAt),
+  hall: textOrNull(link.hall),
   exhibitorId: link.id,
+  lastVerifiedAt: textOrNull(link.lastVerifiedAt),
   listedName: link.listedName,
-  sourceUrl: link.sourceUrl ?? null,
+  sourceUrl: textOrNull(link.sourceUrl),
 })
+
+/** Blank text (a field the team emptied) is null, as for a field never filled in */
+const textOrNull = (value: null | string | undefined) =>
+  typeof value === 'string' && value.trim() ? value : null
 
 /** Each country of the event's exhibitors, most exhibitors first */
 const countriesOf = async (req: PayloadRequest, where: Where[]) => {

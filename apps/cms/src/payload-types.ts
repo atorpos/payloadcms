@@ -988,6 +988,10 @@ export interface Event {
    */
   endDate?: string | null;
   endDate_tz?: SupportedTimezones;
+  /**
+   * Which edition, e.g. 2026 or 45th. The start year when left empty.
+   */
+  edition?: string | null;
   location: {
     /**
      * e.g. Hong Kong Convention and Exhibition Centre
@@ -1014,7 +1018,26 @@ export interface Event {
     coordinatesProblem?: string | null;
   };
   organizer?: string | null;
+  /**
+   * The edition's official website
+   */
   website?: string | null;
+  /**
+   * awoz-api checks that the website is this edition's: its page names the event and the year. A website you enter is kept as it is.
+   */
+  websiteCheck?: {
+    status?: ('verified' | 'unverified' | 'team') | null;
+    checkedAt?: string | null;
+    /**
+     * The page that showed it
+     */
+    sourceUrl?: string | null;
+    /**
+     * Another website found for this edition. If it is the right one, copy it into Website.
+     */
+    suggestedUrl?: string | null;
+    note?: string | null;
+  };
   /**
    * Clients you met or worked with at this event
    */
@@ -1056,11 +1079,19 @@ export interface Event {
     lastRunAt?: string | null;
     found?: number | null;
     saved?: number | null;
+    pagesRead?: number | null;
+    complete?: boolean | null;
     problems?: string | null;
     resumeUrl?: string | null;
+    pendingPages?: string[] | null;
+    /**
+     * The pages of the list read since it was last read from its start, so a run going on doesn't read them again
+     */
+    readPages?: string[] | null;
     attempts?: number | null;
     claimedUntil?: string | null;
   };
+  seriesKey?: string | null;
   createdBy?: {
     relationTo: 'users';
     value: string | User;
@@ -1097,9 +1128,22 @@ export interface EventExhibitor {
    * The exhibitor list page it was found on
    */
   sourceUrl?: string | null;
+  /**
+   * The exhibitor's own page on the list, if it has one
+   */
+  detailUrl?: string | null;
   discoveredAt?: string | null;
   lastVerifiedAt?: string | null;
+  withdrawnAt?: string | null;
   foundBy?: 'claude' | null;
+  createdBy?: {
+    relationTo: 'users';
+    value: string | User;
+  } | null;
+  updatedBy?: {
+    relationTo: 'users';
+    value: string | User;
+  } | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -1117,6 +1161,10 @@ export interface Company {
    */
   localName?: string | null;
   /**
+   * The registered name with its legal form, when shown and different from Name
+   */
+  legalName?: string | null;
+  /**
    * Other names it is listed under. A company found under one of these names is this one.
    */
   aliases?: string[] | null;
@@ -1124,14 +1172,27 @@ export interface Company {
    * In English, e.g. Hong Kong
    */
   country?: string | null;
+  city?: string | null;
   /**
-   * Business category, as listed, e.g. Diamonds, Pearls
+   * Business categories, as listed, e.g. Diamonds, Pearls
    */
-  industry?: string | null;
+  industry?: string[] | null;
+  /**
+   * What the company does, as the list or its website describes it
+   */
+  description?: string | null;
   address?: string | null;
   phone?: string | null;
   email?: string | null;
   website?: string | null;
+  contactPageUrl?: string | null;
+  linkedinUrl?: string | null;
+  instagramUrl?: string | null;
+  facebookUrl?: string | null;
+  /**
+   * Other official pages, e.g. WeChat, YouTube, X
+   */
+  otherLinks?: string[] | null;
   /**
    * The page these details are from
    */
@@ -1140,6 +1201,33 @@ export interface Company {
    * When it was last seen on an exhibitor list
    */
   lastVerifiedAt?: string | null;
+  /**
+   * Where each value is from: the exhibitor list, its profile page, the company’s website, a web search (checked by the team) or the team
+   */
+  fieldSources?:
+    | {
+        field: string;
+        sourceKind: 'exhibitorList' | 'exhibitorProfile' | 'companyWebsite' | 'webSearch' | 'team';
+        confidence?: ('high' | 'medium') | null;
+        sourceUrl?: string | null;
+        seenAt?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Found by a web search, not on the exhibitor list: check them, then tick "Use the suggestions" to fill in the empty fields with them. Never shown in the app until then.
+   */
+  suggestions?: {
+    website?: string | null;
+    email?: string | null;
+    phone?: string | null;
+    address?: string | null;
+    city?: string | null;
+    sourceUrl?: string | null;
+    foundAt?: string | null;
+    note?: string | null;
+    accept?: boolean | null;
+  };
   /**
    * The events it exhibits at
    */
@@ -1161,10 +1249,24 @@ export interface Company {
    * Added by awoz-api's exhibitor search, from the event's exhibitor list
    */
   foundBy?: 'claude' | null;
+  enrichment?: {
+    status?: ('done' | 'nothingNew' | 'noWebsite' | 'failed') | null;
+    lastTriedAt?: string | null;
+    attempts?: number | null;
+  };
+  curatedFields?: string[] | null;
   matchName?: string | null;
   matchNames?: string[] | null;
   matchTokens?: string[] | null;
   matchDomain?: string | null;
+  createdBy?: {
+    relationTo: 'users';
+    value: string | User;
+  } | null;
+  updatedBy?: {
+    relationTo: 'users';
+    value: string | User;
+  } | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -2790,6 +2892,7 @@ export interface EventsSelect<T extends boolean = true> {
   startDate_tz?: T;
   endDate?: T;
   endDate_tz?: T;
+  edition?: T;
   location?:
     | T
     | {
@@ -2804,6 +2907,15 @@ export interface EventsSelect<T extends boolean = true> {
       };
   organizer?: T;
   website?: T;
+  websiteCheck?:
+    | T
+    | {
+        status?: T;
+        checkedAt?: T;
+        sourceUrl?: T;
+        suggestedUrl?: T;
+        note?: T;
+      };
   clients?: T;
   notes?: T;
   status?: T;
@@ -2819,11 +2931,16 @@ export interface EventsSelect<T extends boolean = true> {
         lastRunAt?: T;
         found?: T;
         saved?: T;
+        pagesRead?: T;
+        complete?: T;
         problems?: T;
         resumeUrl?: T;
+        pendingPages?: T;
+        readPages?: T;
         attempts?: T;
         claimedUntil?: T;
       };
+  seriesKey?: T;
   createdBy?: T;
   updatedBy?: T;
   updatedAt?: T;
@@ -2836,24 +2953,65 @@ export interface EventsSelect<T extends boolean = true> {
 export interface CompaniesSelect<T extends boolean = true> {
   name?: T;
   localName?: T;
+  legalName?: T;
   aliases?: T;
   country?: T;
+  city?: T;
   industry?: T;
+  description?: T;
   address?: T;
   phone?: T;
   email?: T;
   website?: T;
+  contactPageUrl?: T;
+  linkedinUrl?: T;
+  instagramUrl?: T;
+  facebookUrl?: T;
+  otherLinks?: T;
   sourceUrl?: T;
   lastVerifiedAt?: T;
+  fieldSources?:
+    | T
+    | {
+        field?: T;
+        sourceKind?: T;
+        confidence?: T;
+        sourceUrl?: T;
+        seenAt?: T;
+        id?: T;
+      };
+  suggestions?:
+    | T
+    | {
+        website?: T;
+        email?: T;
+        phone?: T;
+        address?: T;
+        city?: T;
+        sourceUrl?: T;
+        foundAt?: T;
+        note?: T;
+        accept?: T;
+      };
   events?: T;
   reviewStatus?: T;
   possibleDuplicates?: T;
   locked?: T;
   foundBy?: T;
+  enrichment?:
+    | T
+    | {
+        status?: T;
+        lastTriedAt?: T;
+        attempts?: T;
+      };
+  curatedFields?: T;
   matchName?: T;
   matchNames?: T;
   matchTokens?: T;
   matchDomain?: T;
+  createdBy?: T;
+  updatedBy?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -2869,9 +3027,13 @@ export interface EventExhibitorsSelect<T extends boolean = true> {
   hall?: T;
   attendanceStatus?: T;
   sourceUrl?: T;
+  detailUrl?: T;
   discoveredAt?: T;
   lastVerifiedAt?: T;
+  withdrawnAt?: T;
   foundBy?: T;
+  createdBy?: T;
+  updatedBy?: T;
   updatedAt?: T;
   createdAt?: T;
 }

@@ -1,7 +1,9 @@
-import type { CollectionConfig } from 'payload'
+import type { CollectionBeforeChangeHook, CollectionConfig } from 'payload'
 
 import { loggedIn } from '../access/loggedIn'
+import { editionOf, sameWebsite, seriesKeyOf } from '../exhibitors/eventWebsite'
 import { locateEvent } from '../hooks/locateEvent'
+import { localDay } from '../zonedTime'
 
 /**
  * Sales events, exhibitions and trade shows around the world: when, where, and which clients were
@@ -11,7 +13,43 @@ import { locateEvent } from '../hooks/locateEvent'
  * awoz-api adds the gem, jewellery and raw material trade shows Claude finds on the web every week
  * (../endpoints/appEventDiscovery.ts), then reads their official exhibitor lists into Companies and
  * Event exhibitors (../endpoints/appExhibitorDiscovery.ts); "Exhibitor search" shows how that went.
+ *
+ * Each record is one edition of a show (its dates, its exhibitors); the editions of one show share
+ * `seriesKey`, the name without its year. The search also checks the official website of the edition
+ * ("Official website check", ../exhibitors/eventWebsite.ts): a website the team enters is theirs and
+ * the search never changes it.
  */
+
+/** Fills in the edition and the series key, and marks a website the team entered as theirs */
+const editionAndWebsite: CollectionBeforeChangeHook = ({ context, data, originalDoc, req }) => {
+  const event = { ...originalDoc, ...data }
+  const timeZone = event.startDate_tz || 'UTC'
+
+  if (!event.edition && event.startDate) {
+    data.edition = editionOf(localDay(event.startDate, timeZone))
+  }
+  data.seriesKey = seriesKeyOf(event.name)
+
+  const websiteChanged =
+    'website' in data && (data.website || null) !== (originalDoc?.website || null)
+
+  if (websiteChanged && req.user && !context.fromAwozApi) {
+    const check = { ...originalDoc?.websiteCheck, ...data.websiteCheck }
+
+    data.websiteCheck = data.website
+      ? {
+          ...check,
+          checkedAt: new Date().toISOString(),
+          note: null,
+          sourceUrl: null,
+          status: 'team',
+          suggestedUrl: sameWebsite(check.suggestedUrl, data.website) ? null : check.suggestedUrl,
+        }
+      : { ...check, checkedAt: null, note: null, sourceUrl: null, status: null }
+  }
+
+  return data
+}
 export const Events: CollectionConfig = {
   slug: 'events',
   access: {
@@ -29,7 +67,7 @@ export const Events: CollectionConfig = {
   // Most recent first
   defaultSort: '-startDate',
   hooks: {
-    beforeChange: [locateEvent],
+    beforeChange: [locateEvent, editionAndWebsite],
   },
   fields: [
     {
@@ -97,6 +135,14 @@ export const Events: CollectionConfig = {
           },
         },
       ],
+    },
+    {
+      name: 'edition',
+      type: 'text',
+      admin: {
+        description: 'Which edition, e.g. 2026 or 45th. The start year when left empty.',
+      },
+      maxLength: 60,
     },
     {
       name: 'location',
@@ -191,8 +237,73 @@ export const Events: CollectionConfig = {
         {
           name: 'website',
           type: 'text',
+          admin: {
+            description: "The edition's official website",
+          },
           validate: (value: null | string | undefined) =>
             !value || /^https?:\/\/\S+$/.test(value) || 'Enter a full URL, e.g. https://…',
+        },
+      ],
+    },
+    {
+      // ../exhibitors/eventWebsite.ts
+      name: 'websiteCheck',
+      type: 'group',
+      admin: {
+        description:
+          "awoz-api checks that the website is this edition's: its page names the event and the year. A website you enter is kept as it is.",
+      },
+      label: 'Official website check',
+      fields: [
+        {
+          type: 'row',
+          fields: [
+            {
+              name: 'status',
+              type: 'select',
+              admin: { readOnly: true },
+              options: [
+                { label: 'Verified (its page names this edition)', value: 'verified' },
+                { label: 'Not verified', value: 'unverified' },
+                { label: 'Entered by the team', value: 'team' },
+              ],
+            },
+            {
+              name: 'checkedAt',
+              type: 'date',
+              admin: { date: { pickerAppearance: 'dayAndTime' }, readOnly: true },
+              label: 'Checked',
+            },
+          ],
+        },
+        {
+          name: 'sourceUrl',
+          type: 'text',
+          admin: {
+            condition: (_data, siblingData) => Boolean(siblingData?.sourceUrl),
+            description: 'The page that showed it',
+            readOnly: true,
+          },
+          label: 'Shown on',
+        },
+        {
+          name: 'suggestedUrl',
+          type: 'text',
+          admin: {
+            condition: (_data, siblingData) => Boolean(siblingData?.suggestedUrl),
+            description:
+              'Another website found for this edition. If it is the right one, copy it into Website.',
+            readOnly: true,
+          },
+          label: 'Suggested website',
+        },
+        {
+          name: 'note',
+          type: 'textarea',
+          admin: {
+            condition: (_data, siblingData) => Boolean(siblingData?.note),
+            readOnly: true,
+          },
         },
       ],
     },
@@ -328,6 +439,18 @@ export const Events: CollectionConfig = {
               admin: { readOnly: true },
               label: 'Saved',
             },
+            {
+              name: 'pagesRead',
+              type: 'number',
+              admin: { readOnly: true },
+              label: 'Pages read',
+            },
+            {
+              name: 'complete',
+              type: 'checkbox',
+              admin: { readOnly: true },
+              label: 'Read to its end',
+            },
           ],
         },
         {
@@ -340,9 +463,15 @@ export const Events: CollectionConfig = {
         },
         // Where to go on when the last run stopped early, its attempts, and which run holds it now
         { name: 'resumeUrl', type: 'text', admin: { hidden: true } },
+        // Other pages of the same list still to read (letters, categories), in order
+        { name: 'pendingPages', type: 'text', admin: { hidden: true }, hasMany: true },
+        // The pages of the list read since it was last read from its start, so a run going on doesn't read them again
+        { name: 'readPages', type: 'text', admin: { hidden: true }, hasMany: true },
         { name: 'attempts', type: 'number', admin: { hidden: true } },
         { name: 'claimedUntil', type: 'date', admin: { hidden: true } },
       ],
     },
+    // The editions of one show share it: the name without years (../exhibitors/eventWebsite.ts)
+    { name: 'seriesKey', type: 'text', admin: { hidden: true }, index: true },
   ],
 }

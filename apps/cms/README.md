@@ -952,36 +952,59 @@ same UTC offset in `src/timezones.ts`.
 
 ### Exhibitors
 
-awoz-api reads the official exhibitor lists of upcoming events, after its weekly event search and then daily, and
-saves who exhibits here (awoz-api README: "Exhibitor search"; off until `EXHIBITOR_DISCOVERY_ENABLED=true` there).
-Under **Business**:
+awoz-api reads the official exhibitor lists of upcoming events: those its weekly event search adds right after it,
+and all upcoming ones again every 14 days, then companies' own websites (awoz-api README: "Exhibitor search"; off
+until `EXHIBITOR_DISCOVERY_ENABLED=true` there). It saves who exhibits here. Under **Business**:
 
-- **Companies**: one record per company, however many events it attends: name, other name (e.g. Chinese), other
-  names it's listed under, country, category, address, phone, email, website, the page it's from and when it was last
-  seen on a list. An empty field wasn't on the list; nothing is guessed. A company found again fills in empty fields
-  and never changes filled-in ones, so corrections stay; **Keep as entered** stops the search changing it at all.
-  **Review: Possible duplicate** marks companies found under a name like another's, or the same name in another
-  country, with the companies they may be (**May be the same as**): merge them by hand if they're the same (move the
-  event links to one, delete the other), then mark it **Checked**. Its **Events** tab lists where it exhibits.
-- **Event exhibitors**: which company exhibits at which event, once per event and company (a unique index), with the
-  name, booth and hall as the event lists them, the page it's on, when it was found and last seen. **Attendance**:
-  *Listed* (on the official list when last read), *Confirmed* (checked by you: the search then leaves the stand as
-  you entered it), *Withdrawn* (no longer on the list). Each event shows its exhibitors under **Exhibitors**.
-- On each event, **Exhibitor search** says how the last run went: status, the list it read (**Exhibitor list**:
-  enter an address to have that list read instead of searched for), how many it found and saved, and any problems.
+- **Companies**: one record per company, however many events it attends: name, other name (e.g. Chinese), legal
+  name, other names it's listed under, country, city, categories, description, address, phone, email, website,
+  contact page, social media (LinkedIn, Instagram, Facebook, other), the page it's from and when it was last seen on
+  a list. An empty field wasn't on the list, its profile page or the company's own website; nothing is guessed.
+  **Sources** says where each value is from (exhibitor list, profile on the list, company website, web search checked
+  by you, or you) and when. A company found again fills in empty fields (and adds categories) and never changes
+  filled-in ones; **a field you edit, also one you empty, is never touched again** (`curatedFields`), and **Keep as
+  entered** stops the search changing it at all. **Suggestions** holds what a web search found for a company without
+  a website (its website, email, phone, address, city, and the page): never shown in the app or on the website, nor
+  used to match, until you tick **Use the suggestions**, which fills in the empty fields with them. **Company website
+  reading** (sidebar) says when awoz-api last read its website and how it went. **Review: Possible duplicate** marks
+  companies found under a name like another's, the same website under another name (companies of one group can
+  share one), or the same name in another country, with the companies they may be (**May be the same as**): merge
+  them by hand if they're the same (move the event links to one, delete the other), then mark it **Checked**. Its
+  **Events** tab lists where it exhibits.
+- **Event exhibitors**: which company exhibits at which event, once per event and company (a unique index): each
+  event is one edition of its show, so these are the company's history. With the name, booth and hall as the event
+  lists them, the page it's on, its own page on the list (**Profile page**), when it was found and last seen.
+  **Attendance**: *Listed* (on the official list when last read), *Confirmed* (checked by you: the search then leaves
+  the stand as you entered it), *Withdrawn* (no longer on the list, since **No longer listed since**; kept as history,
+  and listed again if it comes back).
+- On each event: **Edition** (the start year when left empty) and, hidden, a series key shared by the editions of one
+  show (the name without its year). **Official website check** says whether awoz-api verified the **Website** as this
+  edition's official one (Claude fetched it and its page names the event and the year), when, and the page that
+  showed it. A website you enter is marked **Entered by the team** and never changed by the search; a verified one
+  isn't either: another website found later is only shown as **Suggested website**. **Exhibitor search** says how the
+  last run went: status, the list it read (**Exhibitor list**: enter an address to have that list read instead of
+  searched for), how many it found and saved, pages read, whether it was read to its end, and any problems.
   **Don't search for exhibitors** skips the event.
 
 awoz-api calls, with `X-API-Key: <APP_API_KEY>` (`src/endpoints/appExhibitorDiscovery.ts`):
 `GET /api/app/exhibitor-discovery/events` (upcoming events and their search), `POST …/events/:id/claim` (takes an
-event for one run; `409` while another has it), `POST …/events/:id/exhibitors` (saves one page's exhibitors: matched
-to the companies here by `src/exhibitors/companyMatching.ts`) and `POST …/events/:id/status`. The app reads them
-through awoz-api from `GET /api/app/events/:id/exhibitors`, `GET /api/app/companies` and
-`GET /api/app/companies/:id` (`src/endpoints/appCompanies.ts`), which only answer the fields an exhibitor list
-publishes. awoz-api caches them; with `AWOZ_API_URL` set, saving or deleting a company or an exhibitor here tells it
-to drop its cache (`src/hooks/notifyAwozApi.ts`), so the app sees the change at once, otherwise within 10 minutes.
+event for one run; `409` while another has it), `POST …/events/:id/exhibitors` (saves one page's exhibitors, or one
+exhibitor's profile page: matched to the companies here by `src/exhibitors/companyMatching.ts`), `POST
+…/events/:id/status` (how it went, the pages still to read, the website it found: `src/exhibitors/eventWebsite.ts`),
+`GET /api/app/exhibitor-discovery/companies` (companies missing details) and `POST …/companies/:id/enrichment` (what
+the company's own website shows, kept only from a page of the website its list gave, or a web search's
+suggestions). The app and the website read them through awoz-api from `GET /api/app/events/:id/exhibitors`,
+`GET /api/app/companies`, `GET /api/app/companies/:id` and `GET /api/app/companies/:id/events` (the editions it
+exhibited at, newest first), with `sort` (`src/endpoints/appCompanies.ts`), which only answer the public fields:
+never the review fields, sources, suggestions or aliases. awoz-api caches them; with `AWOZ_API_URL` set, saving or
+deleting a company or an exhibitor here tells it to drop its cache (`src/hooks/notifyAwozApi.ts`), so the app sees
+the change at once, otherwise within 10 minutes.
 
-The two collections are new: nothing to migrate. MongoDB creates their indexes when the CMS starts, and Events only
-gains fields that are empty until the first search. `pnpm test` runs the matching tests (`tests/`).
+**Migration:** categories were one text field; they're now a list. `src/migrations/20261117_120000_company_categories.ts`
+splits each company's text at commas and semicolons; it runs once by itself when the CMS starts in production
+(`prodMigrations`), and `pnpm payload migrate:down` joins the lists back into text. The other fields are new and
+optional: nothing to migrate, and MongoDB creates the new indexes when the CMS starts. `pnpm test` runs the matching
+and website tests (`tests/`).
 
 ### Event locations
 
