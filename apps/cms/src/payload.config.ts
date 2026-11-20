@@ -130,6 +130,7 @@ import { locales } from './locales'
 import { migrations } from './migrations'
 import { personalCollections, personalGlobals } from './personal'
 import { photoVariants } from './personal/collections/PersonalPhotos'
+import { flickrGalleryEndpoint, flickrSyncEndpoint } from './personal/flickr/endpoints'
 import { requestSizeLimit } from './requestSizeLimit'
 import { s3StorageAdapter } from './storage/s3'
 import { timezones } from './timezones'
@@ -266,6 +267,8 @@ export default buildConfig({
   // Sends emails such as "forgot password" through SendGrid when SENDGRID_API_KEY is set
   email: sendgridAdapter(),
   endpoints: [
+    flickrGalleryEndpoint,
+    flickrSyncEndpoint,
     appAccountDeleteEndpoint,
     appChatMessagesEndpoint,
     appChatReportAppliedEndpoint,
