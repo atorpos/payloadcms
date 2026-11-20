@@ -10,6 +10,7 @@
  * tab can restore an earlier one.
  */
 import { PersonalPhotoAlbums } from './collections/PersonalPhotoAlbums'
+import { FlickrPhotos } from './collections/FlickrPhotos'
 import { PersonalPhotos } from './collections/PersonalPhotos'
 import { PersonalProjects } from './collections/PersonalProjects'
 import { PersonalAbout } from './globals/PersonalAbout'
@@ -21,7 +22,7 @@ import { PersonalProjectsPage } from './globals/PersonalProjectsPage'
 import { PersonalServices } from './globals/PersonalServices'
 import { PersonalSettings } from './globals/PersonalSettings'
 
-export const personalCollections = [PersonalProjects, PersonalPhotos, PersonalPhotoAlbums]
+export const personalCollections = [PersonalProjects, PersonalPhotos, PersonalPhotoAlbums, FlickrPhotos]
 
 export const personalGlobals = [
   PersonalSettings,

@@ -112,22 +112,23 @@ export type LexicalNodes_8909F562 =
   | SerializedListItemNode<LexicalNodes_8909F562>;
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "LexicalNodes_04AF6417".
+ * via the `definition` "LexicalNodes_FBADA495".
  */
-export type LexicalNodes_04AF6417 =
+export type LexicalNodes_FBADA495 =
   | SerializedTextNode
   | SerializedTabNode
   | SerializedLineBreakNode
-  | SerializedParagraphNode<LexicalNodes_04AF6417>
+  | SerializedParagraphNode<LexicalNodes_FBADA495>
   | SerializedHorizontalRuleNode
   | SerializedUploadNode<'media'>
   | SerializedUploadNode<'personal-photos'>
-  | SerializedQuoteNode<LexicalNodes_04AF6417>
+  | SerializedQuoteNode<LexicalNodes_FBADA495>
   | SerializedRelationshipNode<
       | 'users'
       | 'posts'
       | 'personal-projects'
       | 'personal-photo-albums'
+      | 'flickr-photos'
       | 'pages'
       | 'profiles'
       | 'clients'
@@ -154,11 +155,11 @@ export type LexicalNodes_04AF6417 =
       | 'payload-preferences'
       | 'payload-migrations'
     >
-  | SerializedAutoLinkNode<LexicalNodes_04AF6417, LexicalLinkFields>
-  | SerializedLinkNode<LexicalNodes_04AF6417, LexicalLinkFields>
-  | SerializedListNode<LexicalNodes_04AF6417>
-  | SerializedListItemNode<LexicalNodes_04AF6417>
-  | SerializedHeadingNode<LexicalNodes_04AF6417>;
+  | SerializedAutoLinkNode<LexicalNodes_FBADA495, LexicalLinkFields>
+  | SerializedLinkNode<LexicalNodes_FBADA495, LexicalLinkFields>
+  | SerializedListNode<LexicalNodes_FBADA495>
+  | SerializedListItemNode<LexicalNodes_FBADA495>
+  | SerializedHeadingNode<LexicalNodes_FBADA495>;
 /**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "LexicalNodes_3DE324E4".
@@ -184,6 +185,7 @@ export interface Config {
     'personal-projects': PersonalProject;
     'personal-photos': PersonalPhoto;
     'personal-photo-albums': PersonalPhotoAlbum;
+    'flickr-photos': FlickrPhoto;
     pages: Page;
     profiles: Profile;
     clients: Client;
@@ -243,6 +245,7 @@ export interface Config {
     'personal-projects': PersonalProjectsSelect<false> | PersonalProjectsSelect<true>;
     'personal-photos': PersonalPhotosSelect<false> | PersonalPhotosSelect<true>;
     'personal-photo-albums': PersonalPhotoAlbumsSelect<false> | PersonalPhotoAlbumsSelect<true>;
+    'flickr-photos': FlickrPhotosSelect<false> | FlickrPhotosSelect<true>;
     pages: PagesSelect<false> | PagesSelect<true>;
     profiles: ProfilesSelect<false> | ProfilesSelect<true>;
     clients: ClientsSelect<false> | ClientsSelect<true>;
@@ -778,6 +781,39 @@ export interface PersonalPhotoAlbum {
   _status?: ('draft' | 'published') | null;
 }
 /**
+ * Public Flickr photos. Untick Display on website to hide a photo independently of Flickr.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "flickr-photos".
+ */
+export interface FlickrPhoto {
+  id: string;
+  flickrId: string;
+  title: string;
+  description?: string | null;
+  flickrUrl: string;
+  imageUrl: string;
+  width: number;
+  height: number;
+  tags?: string[] | null;
+  license?: string | null;
+  dateTaken?: string | null;
+  dateUploaded?: number | null;
+  isPublic?: boolean | null;
+  lastSyncedAt?: string | null;
+  displayOnWebsite?: boolean | null;
+  createdBy?: {
+    relationTo: 'users';
+    value: string | User;
+  } | null;
+  updatedBy?: {
+    relationTo: 'users';
+    value: string | User;
+  } | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "pages".
  */
@@ -829,7 +865,7 @@ export interface Profile {
    */
   headline?: string | null;
   photo?: (string | null) | Media;
-  bio?: LexicalRichText<LexicalNodes_04AF6417> | null;
+  bio?: LexicalRichText<LexicalNodes_FBADA495> | null;
   links?:
     | {
         platform: 'github' | 'linkedin' | 'youtube' | 'x' | 'website' | 'other';
@@ -1084,9 +1120,6 @@ export interface Event {
     problems?: string | null;
     resumeUrl?: string | null;
     pendingPages?: string[] | null;
-    /**
-     * The pages of the list read since it was last read from its start, so a run going on doesn't read them again
-     */
     readPages?: string[] | null;
     attempts?: number | null;
     claimedUntil?: string | null;
@@ -2305,6 +2338,10 @@ export interface PayloadLockedDocument {
         value: string | PersonalPhotoAlbum;
       } | null)
     | ({
+        relationTo: 'flickr-photos';
+        value: string | FlickrPhoto;
+      } | null)
+    | ({
         relationTo: 'pages';
         value: string | Page;
       } | null)
@@ -2746,6 +2783,30 @@ export interface PersonalPhotoAlbumsSelect<T extends boolean = true> {
   updatedAt?: T;
   createdAt?: T;
   _status?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "flickr-photos_select".
+ */
+export interface FlickrPhotosSelect<T extends boolean = true> {
+  flickrId?: T;
+  title?: T;
+  description?: T;
+  flickrUrl?: T;
+  imageUrl?: T;
+  width?: T;
+  height?: T;
+  tags?: T;
+  license?: T;
+  dateTaken?: T;
+  dateUploaded?: T;
+  isPublic?: T;
+  lastSyncedAt?: T;
+  displayOnWebsite?: T;
+  createdBy?: T;
+  updatedBy?: T;
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -4899,6 +4960,7 @@ export interface CollectionQueryWidget {
       | 'personal-projects'
       | 'personal-photos'
       | 'personal-photo-albums'
+      | 'flickr-photos'
       | 'pages'
       | 'profiles'
       | 'clients'
@@ -4949,6 +5011,7 @@ export interface ActivityWidget {
           | 'personal-projects'
           | 'personal-photos'
           | 'personal-photo-albums'
+          | 'flickr-photos'
           | 'pages'
           | 'profiles'
           | 'clients'
