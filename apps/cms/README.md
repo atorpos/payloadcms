@@ -49,7 +49,7 @@ uses to test templates.
 | `src/collections/HockeyFantasyLeagues.ts`, `src/endpoints/hockeyFantasyLeague.ts`, `src/endpoints/hockeyFantasyPoints.ts` | The fantasy league each of those accounts sets up in the app: its teams, theirs marked as theirs, and each team's points counted every night |
 | `src/collections/HockeyFantasyTeams.ts`, `src/endpoints/hockeyFantasyTeams.ts` | Their fantasy teams from before the app had leagues |
 | `src/collections/HockeyPushNotifications.ts`, `src/endpoints/hockeyPushNotifications.ts` | Push notifications to the HockeyPoolCap app (see "Push notifications to the HockeyPoolCap app") |
-| `src/components/NhlData`, `src/nhl`, `src/endpoints/nhlData.ts` | The NHL Data screens: the HockeyPoolCap API's teams, players and stats, read and changed there (see "NHL data") |
+| `src/components/NhlData`, `src/nhl`, `src/endpoints/nhlData.ts`, `src/endpoints/nhlTrades.ts` | The NHL Data screens: the HockeyPoolCap API's teams, players, stats and trades, read and changed there (see "NHL data", "NHL trades and their articles") |
 | `src/components/HockeyAccounts`, `src/hockeyAccounts`, `src/endpoints/hockeyAccounts.ts` | The HockeyPoolCap Accounts screens: the Hockolic app's accounts, read and changed in the API (see "HockeyPoolCap accounts") |
 | `src/app/(frontend)/ios-app/`, `scripts/import-legal-pages.ts` | Privacy Policy and Terms of Use of the app and the Vigor website (see "Privacy policy and terms of use") |
 | `src/vigor/`, `src/locales.ts`             | Content of the Vigor website in four languages (see "Vigor website")                   |
@@ -1406,10 +1406,45 @@ that hasn't gone out cancels it, and **Failed** comes with the reason, e.g. no F
 The **daily game recaps** aren't written here: the API sends each phone one by itself every morning (its favorite
 teams' results, its favorite players' points, wins and shutouts, and its fantasy team's points).
 
-The API uses three endpoints (`src/endpoints/hockeyPushNotifications.ts`), with `X-API-Key: <HOCKEY_API_KEY>`:
+The API uses these endpoints (`src/endpoints/hockeyPushNotifications.ts`), with `X-API-Key: <HOCKEY_API_KEY>`:
 `GET /api/hockey/push-notifications/due` lists the notifications due, with the chosen teams or the members' accounts
 in the API (`appUserIds`); `POST /api/hockey/push-notifications/:id/start` marks one as sending (`409` if it no longer
-waits); `POST /api/hockey/push-notifications/:id/result` saves how it went.
+waits); `POST /api/hockey/push-notifications/:id/result` saves how it went (phones attempted, accepted by Firebase,
+failed, rejected, removed); `POST /api/hockey/push-notifications` queues a breaking trade's notification (below).
+
+**Breaking trades** (category *Breaking trade*) aren't written here: the API makes one once an operator approves it
+on the trade's screen (NHL Data → Trades), for **everyone with breaking news on** or the **fans and followers of the
+trade's teams and players**. It's sent within a minute, only to phones with breaking news on, each phone once per
+trade, and tapping it opens the trade in the app. The same approval sent twice makes one notification
+(`deliveryEventId`), and it can't be changed or sent again here.
+
+### NHL trades and their articles
+
+**NHL Data → Trades** follows each NHL trade the HockeyPoolCap API found in the league's official trade tracker (every
+five minutes) or an admin entered: its status (detected, verified, applied, cap checked, article waiting, published,
+notifications waiting, completed; or needs review, failed, reverted), why it waits, each stage's time from the
+announcement, what moved and how sure each detail is (confirmed by an official source, inferred from HockeyPoolCap's
+data, or unresolved), each team's cap before and after, the official sources, and its full history (the API's README:
+"NHL trades"; its `docs/wiki/Trades.md` has the whole process and the runbook). From there:
+
+- **Settle** an unresolved asset from the official sources (a player's NHL ID, a pick's original team, the conditions
+  as written), then **Reprocess**. **Read the tracker now** checks for new trades.
+- **Revert** puts the players, picks and retained salary back as they were; **Delete** removes a trade that changed
+  nothing (e.g. a tracker line entered by hand instead).
+- **Notifications**: send a **test** to one phone (its device ID or installation ID), then **Approve** an audience: the
+  screen shows the phones it reaches now and the text. Approving is recorded with your email. Only once the article is
+  published; never during development or testing.
+
+**HockeyPoolCap App → Trade Articles** has each trade's article, written by the API as a draft from the verified
+data: facts, and a "What comes next" analysis worked out by rules (marked as such, with a note the app shows). Check it
+against the sources, edit it if needed, and set **Status** to *Published*: the app shows it, and the trade's
+notifications can be approved. Once you change it, the API keeps your text and only updates its checks
+(*Verification*, *Findings*), cap figures and sources. An article whose trade needs review can't be published.
+
+The API uses `PUT /api/hockey/trade-articles/by-trade/:tradeId` (writes or updates the draft),
+`POST .../publish` (only with the API's `TRADES_AUTO_PUBLISH=true` and nothing inferred or noted) and `GET` of the same
+(for the app), with `X-API-Key: <HOCKEY_API_KEY>` (`src/endpoints/hockeyTradeArticles.ts`). The Trades screen's actions
+go to the API's `/api/v1/admin/trades` endpoints with `HOCKEY_API_ADMIN_KEY` (`src/endpoints/nhlTrades.ts`).
 
 ## NHL data
 

@@ -19,11 +19,14 @@ const MAX_DUE = 20
  * `GET /api/hockey/push-notifications/due` - the notifications waiting to send whose time has come, oldest first:
  *
  *   { notifications: [{ id, title, body, screen: "fantasy",
- *                       audience: "everyone" | "teamFans" | "members",
- *                       teams: ["TOR", "MTL"] | null, appUserIds: [12, 40] | null }] }
+ *                       audience: "everyone" | "teamFans" | "members" | "breakingNews" | "tradeFollowers",
+ *                       teams: ["TOR", "MTL"] | null, appUserIds: [12, 40] | null,
+ *                       category: "general" | "breakingTrade",
+ *                       tradeId, deliveryEventId, playerIds, articleId }] }
  *
- * `teams` for the fans of those teams (the phones with one as a favorite team), `appUserIds` the chosen members'
- * accounts in the HockeyPoolCap API; null for the other audiences.
+ * `teams` for the fans of those teams (the phones with one as a favorite team), or a trade's teams; `appUserIds` the
+ * chosen members' accounts in the HockeyPoolCap API; null for the other audiences. A breaking trade has its trade's
+ * ID (the app opens it), the IDs of its players, and the delivery event that ties the result to the API's outbox.
  */
 export const hockeyPushNotificationsDueEndpoint: Endpoint = {
   handler: async (req) => {
@@ -54,11 +57,19 @@ export const hockeyPushNotificationsDueEndpoint: Endpoint = {
           id: notification.id,
           appUserIds:
             notification.audience === 'members' ? await appUserIds(req, notification) : null,
+          articleId: notification.trade?.articleId ?? null,
           audience: notification.audience,
           body: notification.body,
+          category: notification.category ?? 'general',
+          deliveryEventId: notification.trade?.deliveryEventId ?? null,
+          playerIds: Array.isArray(notification.trade?.playerIds) ? notification.trade.playerIds : null,
           screen: notification.screen,
-          teams: notification.audience === 'teamFans' ? (notification.teams ?? []) : null,
+          teams:
+            notification.audience === 'teamFans' || notification.category === 'breakingTrade'
+              ? (notification.teams ?? [])
+              : null,
           title: notification.title,
+          tradeId: notification.trade?.tradeId ?? null,
         })),
       ),
     })
@@ -102,7 +113,7 @@ export const hockeyPushNotificationStartEndpoint: Endpoint = {
 /**
  * `POST /api/hockey/push-notifications/:id/result` - how sending went:
  *
- *   { "status": "sent", "devices": 120, "delivered": 117, "failed": 1, "removed": 2 }
+ *   { "status": "sent", "devices": 120, "delivered": 117, "failed": 1, "rejected": 0, "removed": 2 }
  *   { "status": "failed", "problem": "No Firebase service account: …" }
  *
  * Only for a notification that is sending; `409` otherwise.
@@ -141,6 +152,7 @@ export const hockeyPushNotificationResultEndpoint: Endpoint = {
           delivered: count(body?.delivered),
           devices: count(body?.devices),
           failed: count(body?.failed),
+          rejected: count(body?.rejected),
           removed: count(body?.removed),
         },
         sentAt: status === 'sent' ? new Date().toISOString() : null,
@@ -153,6 +165,92 @@ export const hockeyPushNotificationResultEndpoint: Endpoint = {
   },
   method: 'post',
   path: '/hockey/push-notifications/:id/result',
+}
+
+/**
+ * `POST /api/hockey/push-notifications` - a breaking trade's notification, approved by an operator, to send now:
+ *
+ *   { "title": "BREAKING: …", "body": "…", "audience": "breakingNews" | "tradeFollowers", "tradeId": 12,
+ *     "deliveryEventId": "6f1c…", "teams": ["DET", "MTL"], "playerIds": [369, 377], "articleId": "…",
+ *     "approvedBy": "editor@…" }
+ *
+ * `200 { id }`. The same deliveryEventId again answers the notification made the first time: never two.
+ */
+export const hockeyPushNotificationQueueEndpoint: Endpoint = {
+  handler: async (req) => {
+    const refused = refuseWithoutHockeyApiKey(req)
+
+    if (refused) {
+      return refused
+    }
+
+    const body = (await req.json?.().catch(() => null)) as null | Record<string, unknown>
+    const deliveryEventId = text(body?.deliveryEventId)
+    const title = text(body?.title)?.slice(0, 100)
+    const message = text(body?.body)
+    const audience = body?.audience
+    const tradeId = count(body?.tradeId)
+
+    if (!deliveryEventId || !title || !message || !tradeId ||
+        (audience !== 'breakingNews' && audience !== 'tradeFollowers')) {
+      return Response.json(
+        {
+          errors: [
+            {
+              message:
+                'title, body, tradeId, deliveryEventId and audience (breakingNews or tradeFollowers) are needed.',
+            },
+          ],
+        },
+        { status: 400 },
+      )
+    }
+
+    const { docs } = await req.payload.find({
+      collection: 'hockey-push-notifications',
+      depth: 0,
+      limit: 1,
+      overrideAccess: true,
+      where: { 'trade.deliveryEventId': { equals: deliveryEventId } },
+    })
+
+    if (docs[0]) {
+      return Response.json({ id: docs[0].id })
+    }
+
+    const teams = (Array.isArray(body?.teams) ? body.teams : [])
+      .filter((team): team is string => typeof team === 'string' && /^[A-Z]{2,5}$/.test(team))
+    const playerIds = (Array.isArray(body?.playerIds) ? body.playerIds : [])
+      .filter((id): id is number => typeof id === 'number' && Number.isSafeInteger(id) && id > 0)
+
+    const created = await req.payload.create({
+      collection: 'hockey-push-notifications',
+      context: { tradeQueue: true },
+      data: {
+        audience,
+        body: message,
+        category: 'breakingTrade',
+        delivery: 'now',
+        screen: 'home',
+        sendAt: new Date().toISOString(),
+        status: 'queued',
+        teams: teams as HockeyPushNotification['teams'],
+        title,
+        trade: {
+          approvedBy: text(body?.approvedBy),
+          articleId: text(body?.articleId),
+          deliveryEventId,
+          playerIds,
+          tradeId,
+        },
+      },
+      overrideAccess: true,
+    })
+
+    return Response.json({ id: created.id })
+  },
+  method: 'post',
+  path: '/hockey/push-notifications',
 }
 
 /** The HockeyPoolCap API accounts of the chosen members */

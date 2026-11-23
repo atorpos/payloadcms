@@ -48,6 +48,10 @@ export const nhlTeamOptions = [
  *
  * The daily game recaps (favorite teams' results, favorite players, the fantasy team) go out from the API by
  * themselves: they're not written here.
+ *
+ * Breaking trades (category "breakingTrade") are made by the API once an operator approves them on the trade's
+ * screen (NHL Data → Trades): one per trade and audience, never twice (deliveryEventId), and the app opens the trade.
+ * They go only to the phones with breaking news on.
  */
 export const HockeyPushNotifications: CollectionConfig = {
   slug: 'hockey-push-notifications',
@@ -58,7 +62,7 @@ export const HockeyPushNotifications: CollectionConfig = {
     update: loggedIn,
   },
   admin: {
-    defaultColumns: ['title', 'audience', 'status', 'sendAt', 'results.delivered'],
+    defaultColumns: ['title', 'category', 'audience', 'status', 'sendAt', 'results.delivered'],
     description:
       'Notifications on the phones of HockeyPoolCap app users with notifications on. Choose "Now" or a time under Send, and save: it goes out within a minute of that time. The daily game recaps go out by themselves.',
     group: 'HockeyPoolCap App',
@@ -100,6 +104,21 @@ export const HockeyPushNotifications: CollectionConfig = {
       required: true,
     },
     {
+      name: 'category',
+      type: 'select',
+      admin: {
+        description: 'Breaking trades are made on the trade’s screen (NHL Data → Trades) once approved',
+        position: 'sidebar',
+        readOnly: true,
+      },
+      defaultValue: 'general',
+      options: [
+        { label: 'General', value: 'general' },
+        { label: 'Breaking trade', value: 'breakingTrade' },
+      ],
+      required: true,
+    },
+    {
       name: 'audience',
       type: 'radio',
       defaultValue: 'everyone',
@@ -108,8 +127,35 @@ export const HockeyPushNotifications: CollectionConfig = {
         { label: 'Everyone with notifications on', value: 'everyone' },
         { label: 'Fans of chosen teams', value: 'teamFans' },
         { label: 'Chosen members', value: 'members' },
+        { label: 'Everyone with breaking news on', value: 'breakingNews' },
+        { label: 'Fans and followers of the trade’s teams and players (breaking news on)', value: 'tradeFollowers' },
       ],
       required: true,
+    },
+    {
+      name: 'trade',
+      type: 'group',
+      admin: {
+        condition: (data) => data?.category === 'breakingTrade',
+        description: 'Set by the HockeyPoolCap API: the trade it’s about, and who approved it',
+      },
+      fields: [
+        { name: 'tradeId', type: 'number', admin: { readOnly: true }, label: 'Trade' },
+        {
+          name: 'deliveryEventId',
+          type: 'text',
+          admin: { readOnly: true },
+          index: true,
+          label: 'Delivery event',
+        },
+        { name: 'articleId', type: 'text', admin: { readOnly: true }, label: 'Article' },
+        {
+          name: 'playerIds',
+          type: 'json',
+          admin: { description: 'The players in it (HockeyPoolCap IDs)', readOnly: true },
+        },
+        { name: 'approvedBy', type: 'text', admin: { readOnly: true }, label: 'Approved by' },
+      ],
     },
     {
       name: 'teams',
@@ -221,6 +267,15 @@ export const HockeyPushNotifications: CollectionConfig = {
           admin: { description: 'Not accepted, e.g. Firebase was busy', readOnly: true },
         },
         {
+          name: 'rejected',
+          type: 'number',
+          admin: {
+            description:
+              'Refused by Firebase without saying the phone is gone, e.g. registered with another Firebase project: kept',
+            readOnly: true,
+          },
+        },
+        {
           name: 'removed',
           type: 'number',
           admin: {
@@ -244,9 +299,23 @@ export const HockeyPushNotifications: CollectionConfig = {
   hooks: {
     beforeChange: [
       (({ context, data, operation, originalDoc, req }) => {
-        // The HockeyPoolCap API's progress (src/endpoints/hockeyPushNotifications.ts)
-        if (context.pushProgress) {
+        // The HockeyPoolCap API's progress, or a breaking trade it queued (src/endpoints/hockeyPushNotifications.ts)
+        if (context.pushProgress || context.tradeQueue) {
           return data
+        }
+
+        // A breaking trade's notification is the API's: it can't be changed or sent again here
+        if (operation === 'update' && (originalDoc as { category?: string } | undefined)?.category === 'breakingTrade') {
+          throw new ValidationError({
+            collection: 'hockey-push-notifications',
+            errors: [
+              {
+                message: 'A breaking trade’s notification is sent from the trade’s screen (NHL Data → Trades).',
+                path: 'delivery',
+              },
+            ],
+            req,
+          })
         }
 
         // A copy (Duplicate) gets the original as originalDoc too, but is a new notification
@@ -273,7 +342,8 @@ export const HockeyPushNotifications: CollectionConfig = {
         const fresh = {
           ...data,
           problem: null,
-          results: { delivered: null, devices: null, failed: null, removed: null },
+          category: 'general',
+          results: { delivered: null, devices: null, failed: null, rejected: null, removed: null },
           sentAt: null,
         }
 

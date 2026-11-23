@@ -112,17 +112,17 @@ export type LexicalNodes_8909F562 =
   | SerializedListItemNode<LexicalNodes_8909F562>;
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "LexicalNodes_FBADA495".
+ * via the `definition` "LexicalNodes_CCE48C75".
  */
-export type LexicalNodes_FBADA495 =
+export type LexicalNodes_CCE48C75 =
   | SerializedTextNode
   | SerializedTabNode
   | SerializedLineBreakNode
-  | SerializedParagraphNode<LexicalNodes_FBADA495>
+  | SerializedParagraphNode<LexicalNodes_CCE48C75>
   | SerializedHorizontalRuleNode
   | SerializedUploadNode<'media'>
   | SerializedUploadNode<'personal-photos'>
-  | SerializedQuoteNode<LexicalNodes_FBADA495>
+  | SerializedQuoteNode<LexicalNodes_CCE48C75>
   | SerializedRelationshipNode<
       | 'users'
       | 'posts'
@@ -146,6 +146,7 @@ export type LexicalNodes_FBADA495 =
       | 'hockey-fantasy-leagues'
       | 'hockey-fantasy-teams'
       | 'hockey-push-notifications'
+      | 'hockey-trade-articles'
       | 'vigor-products'
       | 'vigor-services'
       | 'vigor-news'
@@ -155,11 +156,11 @@ export type LexicalNodes_FBADA495 =
       | 'payload-preferences'
       | 'payload-migrations'
     >
-  | SerializedAutoLinkNode<LexicalNodes_FBADA495, LexicalLinkFields>
-  | SerializedLinkNode<LexicalNodes_FBADA495, LexicalLinkFields>
-  | SerializedListNode<LexicalNodes_FBADA495>
-  | SerializedListItemNode<LexicalNodes_FBADA495>
-  | SerializedHeadingNode<LexicalNodes_FBADA495>;
+  | SerializedAutoLinkNode<LexicalNodes_CCE48C75, LexicalLinkFields>
+  | SerializedLinkNode<LexicalNodes_CCE48C75, LexicalLinkFields>
+  | SerializedListNode<LexicalNodes_CCE48C75>
+  | SerializedListItemNode<LexicalNodes_CCE48C75>
+  | SerializedHeadingNode<LexicalNodes_CCE48C75>;
 /**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "LexicalNodes_3DE324E4".
@@ -203,6 +204,7 @@ export interface Config {
     'hockey-fantasy-leagues': HockeyFantasyLeague;
     'hockey-fantasy-teams': HockeyFantasyTeam;
     'hockey-push-notifications': HockeyPushNotification;
+    'hockey-trade-articles': HockeyTradeArticle;
     'vigor-products': VigorProduct;
     'vigor-services': VigorService;
     'vigor-news': VigorNewsArticle;
@@ -263,6 +265,7 @@ export interface Config {
     'hockey-fantasy-leagues': HockeyFantasyLeaguesSelect<false> | HockeyFantasyLeaguesSelect<true>;
     'hockey-fantasy-teams': HockeyFantasyTeamsSelect<false> | HockeyFantasyTeamsSelect<true>;
     'hockey-push-notifications': HockeyPushNotificationsSelect<false> | HockeyPushNotificationsSelect<true>;
+    'hockey-trade-articles': HockeyTradeArticlesSelect<false> | HockeyTradeArticlesSelect<true>;
     'vigor-products': VigorProductsSelect<false> | VigorProductsSelect<true>;
     'vigor-services': VigorServicesSelect<false> | VigorServicesSelect<true>;
     'vigor-news': VigorNewsSelect<false> | VigorNewsSelect<true>;
@@ -865,7 +868,7 @@ export interface Profile {
    */
   headline?: string | null;
   photo?: (string | null) | Media;
-  bio?: LexicalRichText<LexicalNodes_FBADA495> | null;
+  bio?: LexicalRichText<LexicalNodes_CCE48C75> | null;
   links?:
     | {
         platform: 'github' | 'linkedin' | 'youtube' | 'x' | 'website' | 'other';
@@ -1846,7 +1849,32 @@ export interface HockeyPushNotification {
    * The tab the app opens when the notification is tapped
    */
   screen: 'home' | 'teams' | 'players' | 'fantasy' | 'settings';
-  audience: 'everyone' | 'teamFans' | 'members';
+  /**
+   * Breaking trades are made on the trade’s screen (NHL Data → Trades) once approved
+   */
+  category: 'general' | 'breakingTrade';
+  audience: 'everyone' | 'teamFans' | 'members' | 'breakingNews' | 'tradeFollowers';
+  /**
+   * Set by the HockeyPoolCap API: the trade it’s about, and who approved it
+   */
+  trade?: {
+    tradeId?: number | null;
+    deliveryEventId?: string | null;
+    articleId?: string | null;
+    /**
+     * The players in it (HockeyPoolCap IDs)
+     */
+    playerIds?:
+      | {
+          [k: string]: unknown;
+        }
+      | unknown[]
+      | string
+      | number
+      | boolean
+      | null;
+    approvedBy?: string | null;
+  };
   /**
    * The phones with one of these as a favorite team in the app
    */
@@ -1909,11 +1937,109 @@ export interface HockeyPushNotification {
      */
     failed?: number | null;
     /**
+     * Refused by Firebase without saying the phone is gone, e.g. registered with another Firebase project: kept
+     */
+    rejected?: number | null;
+    /**
      * Phones that no longer have the app or notifications: never sent to again
      */
     removed?: number | null;
   };
   problem?: string | null;
+  createdBy?: {
+    relationTo: 'users';
+    value: string | User;
+  } | null;
+  updatedBy?: {
+    relationTo: 'users';
+    value: string | User;
+  } | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Written by the HockeyPoolCap API for each verified trade. Check it, edit it if needed, and publish it: the app shows it, and the trade’s notifications can then be approved (NHL Data → Trades).
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "hockey-trade-articles".
+ */
+export interface HockeyTradeArticle {
+  id: string;
+  title: string;
+  slug: string;
+  /**
+   * For search engines and link previews, up to 160 characters
+   */
+  seoDescription?: string | null;
+  /**
+   * Facts come from the official sources and HockeyPoolCap’s data; analysis is reasoning from them. Keep them apart.
+   */
+  sections: {
+    heading?: string | null;
+    kind: 'facts' | 'analysis';
+    body: string;
+    id?: string | null;
+  }[];
+  /**
+   * Shown with the article: how its analysis was made
+   */
+  analysisNote?: string | null;
+  status: 'draft' | 'published';
+  publishedAt?: string | null;
+  /**
+   * From the API’s checks: “with notes” means some details are inferred or noted below
+   */
+  verification?: ('verified' | 'verifiedWithNotes' | 'needsReview') | null;
+  /**
+   * What the API’s checks found
+   */
+  findings?:
+    | {
+        finding?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  tradeId?: number | null;
+  tradeKey?: string | null;
+  madeOn?: string | null;
+  teams?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  /**
+   * The official announcements it rests on
+   */
+  sources?:
+    | {
+        url: string;
+        publisher?: string | null;
+        title?: string | null;
+        publishedAt?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Each team’s cap before and after, as calculated by the API
+   */
+  capImpact?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  generatedAt?: string | null;
+  /**
+   * An editor changed it: the API keeps their text
+   */
+  editedByEditor?: boolean | null;
   createdBy?: {
     relationTo: 'users';
     value: string | User;
@@ -2408,6 +2534,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'hockey-push-notifications';
         value: string | HockeyPushNotification;
+      } | null)
+    | ({
+        relationTo: 'hockey-trade-articles';
+        value: string | HockeyTradeArticle;
       } | null)
     | ({
         relationTo: 'vigor-products';
@@ -3336,7 +3466,17 @@ export interface HockeyPushNotificationsSelect<T extends boolean = true> {
   title?: T;
   body?: T;
   screen?: T;
+  category?: T;
   audience?: T;
+  trade?:
+    | T
+    | {
+        tradeId?: T;
+        deliveryEventId?: T;
+        articleId?: T;
+        playerIds?: T;
+        approvedBy?: T;
+      };
   teams?: T;
   members?: T;
   delivery?: T;
@@ -3350,9 +3490,57 @@ export interface HockeyPushNotificationsSelect<T extends boolean = true> {
         devices?: T;
         delivered?: T;
         failed?: T;
+        rejected?: T;
         removed?: T;
       };
   problem?: T;
+  createdBy?: T;
+  updatedBy?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "hockey-trade-articles_select".
+ */
+export interface HockeyTradeArticlesSelect<T extends boolean = true> {
+  title?: T;
+  slug?: T;
+  seoDescription?: T;
+  sections?:
+    | T
+    | {
+        heading?: T;
+        kind?: T;
+        body?: T;
+        id?: T;
+      };
+  analysisNote?: T;
+  status?: T;
+  publishedAt?: T;
+  verification?: T;
+  findings?:
+    | T
+    | {
+        finding?: T;
+        id?: T;
+      };
+  tradeId?: T;
+  tradeKey?: T;
+  madeOn?: T;
+  teams?: T;
+  sources?:
+    | T
+    | {
+        url?: T;
+        publisher?: T;
+        title?: T;
+        publishedAt?: T;
+        id?: T;
+      };
+  capImpact?: T;
+  generatedAt?: T;
+  editedByEditor?: T;
   createdBy?: T;
   updatedBy?: T;
   updatedAt?: T;
@@ -4978,6 +5166,7 @@ export interface CollectionQueryWidget {
       | 'hockey-fantasy-leagues'
       | 'hockey-fantasy-teams'
       | 'hockey-push-notifications'
+      | 'hockey-trade-articles'
       | 'vigor-products'
       | 'vigor-services'
       | 'vigor-news'
@@ -5029,6 +5218,7 @@ export interface ActivityWidget {
           | 'hockey-fantasy-leagues'
           | 'hockey-fantasy-teams'
           | 'hockey-push-notifications'
+          | 'hockey-trade-articles'
           | 'vigor-products'
           | 'vigor-services'
           | 'vigor-news'
