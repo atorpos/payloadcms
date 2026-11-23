@@ -17,6 +17,7 @@ import { HockeyFantasyLeagues } from './collections/HockeyFantasyLeagues'
 import { HockeyFantasyTeams } from './collections/HockeyFantasyTeams'
 import { HockeyMembers } from './collections/HockeyMembers'
 import { HockeyPushNotifications } from './collections/HockeyPushNotifications'
+import { HockeyTradeArticles } from './collections/HockeyTradeArticles'
 import { MarketMaterials } from './collections/MarketMaterials'
 import { MarketPrices } from './collections/MarketPrices'
 import { Organizations } from './collections/Organizations'
@@ -109,10 +110,26 @@ import {
   hockeyMemberSaveEndpoint,
 } from './endpoints/hockeyMembers'
 import {
+  hockeyPushNotificationQueueEndpoint,
   hockeyPushNotificationResultEndpoint,
   hockeyPushNotificationsDueEndpoint,
   hockeyPushNotificationStartEndpoint,
 } from './endpoints/hockeyPushNotifications'
+import {
+  hockeyTradeArticleEndpoint,
+  hockeyTradeArticlePublishEndpoint,
+  hockeyTradeArticleSaveEndpoint,
+} from './endpoints/hockeyTradeArticles'
+import {
+  nhlTradeApproveEndpoint,
+  nhlTradeAssetEndpoint,
+  nhlTradeCancelEndpoint,
+  nhlTradeDeleteEndpoint,
+  nhlTradeReprocessEndpoint,
+  nhlTradeRevertEndpoint,
+  nhlTradesDetectEndpoint,
+  nhlTradeTestEndpoint,
+} from './endpoints/nhlTrades'
 import {
   nhlCapSummariesEndpoint,
   nhlCareerSaveEndpoint,
@@ -212,6 +229,17 @@ export default buildConfig({
           exact: true,
           path: '/nhl/teams',
         },
+        // NHL trades on their way from the league's announcement to the app (the API's trade pipeline)
+        nhlTrade: {
+          Component: '/components/NhlData/NhlTradeView#NhlTradeView',
+          exact: true,
+          path: '/nhl/trades/:id',
+        },
+        nhlTrades: {
+          Component: '/components/NhlData/NhlTradesView#NhlTradesView',
+          exact: true,
+          path: '/nhl/trades',
+        },
         // Two-factor setup and login check, see src/proxy.ts
         twoFactor: {
           Component: '/components/TwoFactorView#TwoFactorView',
@@ -249,6 +277,7 @@ export default buildConfig({
     HockeyFantasyLeagues,
     HockeyFantasyTeams,
     HockeyPushNotifications,
+    HockeyTradeArticles,
     ...vigorCollections,
   ],
   cors: allowedOrigins,
@@ -322,9 +351,21 @@ export default buildConfig({
     hockeyMemberDeleteEndpoint,
     hockeyMemberEndpoint,
     hockeyMemberSaveEndpoint,
+    hockeyPushNotificationQueueEndpoint,
     hockeyPushNotificationResultEndpoint,
     hockeyPushNotificationsDueEndpoint,
     hockeyPushNotificationStartEndpoint,
+    hockeyTradeArticleEndpoint,
+    hockeyTradeArticlePublishEndpoint,
+    hockeyTradeArticleSaveEndpoint,
+    nhlTradeApproveEndpoint,
+    nhlTradeAssetEndpoint,
+    nhlTradeCancelEndpoint,
+    nhlTradeDeleteEndpoint,
+    nhlTradeReprocessEndpoint,
+    nhlTradeRevertEndpoint,
+    nhlTradesDetectEndpoint,
+    nhlTradeTestEndpoint,
     nhlCapSummariesEndpoint,
     nhlCareerSaveEndpoint,
     nhlCareerStatusEndpoint,

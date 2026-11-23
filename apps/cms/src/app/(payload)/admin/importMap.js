@@ -40,6 +40,8 @@ import { NhlPlayersView as NhlPlayersView_abe430ff3bdcf82c54fb2226b443cbe1 } fro
 import { NhlReviewView as NhlReviewView_f516e4392875fc9872fdfa358d6c0cdc } from '../../../components/NhlData/NhlReviewView'
 import { NhlTeamView as NhlTeamView_71264029c0e3f8587f827ee3b27b017b } from '../../../components/NhlData/NhlTeamView'
 import { NhlTeamsView as NhlTeamsView_d230c53cc3db262346ac38107e328bd0 } from '../../../components/NhlData/NhlTeamsView'
+import { NhlTradeView as NhlTradeView_b5b03d35267a57880bf41f5460ab3a99 } from '../../../components/NhlData/NhlTradeView'
+import { NhlTradesView as NhlTradesView_fc0aeada41e77d2984c369ce94f914e9 } from '../../../components/NhlData/NhlTradesView'
 import { TwoFactorView as TwoFactorView_565539fe0451e8014836ad409a6df033 } from '../../../components/TwoFactorView'
 import { WelcomeWidget as WelcomeWidget_ab83ff7e88da8d3530831f296ec4756a } from '@payloadcms/ui/rsc'
 import { CollectionCards as CollectionCards_ab83ff7e88da8d3530831f296ec4756a } from '@payloadcms/ui/rsc'
@@ -95,6 +97,8 @@ export const importMap = {
   "/components/NhlData/NhlReviewView#NhlReviewView": NhlReviewView_f516e4392875fc9872fdfa358d6c0cdc,
   "/components/NhlData/NhlTeamView#NhlTeamView": NhlTeamView_71264029c0e3f8587f827ee3b27b017b,
   "/components/NhlData/NhlTeamsView#NhlTeamsView": NhlTeamsView_d230c53cc3db262346ac38107e328bd0,
+  "/components/NhlData/NhlTradeView#NhlTradeView": NhlTradeView_b5b03d35267a57880bf41f5460ab3a99,
+  "/components/NhlData/NhlTradesView#NhlTradesView": NhlTradesView_fc0aeada41e77d2984c369ce94f914e9,
   "/components/TwoFactorView#TwoFactorView": TwoFactorView_565539fe0451e8014836ad409a6df033,
   "@payloadcms/ui/rsc#WelcomeWidget": WelcomeWidget_ab83ff7e88da8d3530831f296ec4756a,
   "@payloadcms/ui/rsc#CollectionCards": CollectionCards_ab83ff7e88da8d3530831f296ec4756a,
