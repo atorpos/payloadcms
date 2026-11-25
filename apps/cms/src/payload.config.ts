@@ -20,6 +20,7 @@ import { HockeyPushNotifications } from './collections/HockeyPushNotifications'
 import { HockeyTradeArticles } from './collections/HockeyTradeArticles'
 import { MarketMaterials } from './collections/MarketMaterials'
 import { MarketPrices } from './collections/MarketPrices'
+import { OfferCodes } from './collections/OfferCodes'
 import { Organizations } from './collections/Organizations'
 import { PushNotifications } from './collections/PushNotifications'
 import { seedMarketMaterials } from './collections/marketSeed'
@@ -278,6 +279,8 @@ export default buildConfig({
     HockeyFantasyTeams,
     HockeyPushNotifications,
     HockeyTradeArticles,
+    // One-time-use App Store offer codes, handed out by the personal website's redeem link
+    OfferCodes,
     ...vigorCollections,
   ],
   cors: allowedOrigins,
