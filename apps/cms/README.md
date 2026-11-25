@@ -57,6 +57,7 @@ uses to test templates.
 | `scripts/import-legacy-catalog.ts`         | Old website's products in as drafts (see "Products from the old website")              |
 | `scripts/publish-legacy-products.ts`       | Publishes them in every language (see "Products from the old website")                 |
 | `scripts/import-app-page.ts`, `scripts/app-page/` | The first version of the Vigor website's VgemsAI app page (see "VgemsAI app page") |
+| `src/collections/OfferCodes.ts`, `src/offerCodes/`, `scripts/import-offer-codes.ts` | One-time-use App Store offer codes that the personal website hands out (see "App Store offer codes") |
 | `src/timezones.ts`, `src/zonedTime.ts`     | Time zones offered for event dates, and days at midnight in a time zone                |
 | `src/proxy.ts`, `src/twoFactor/`           | Two-factor authentication for every login (see "Two-factor authentication")            |
 | `src/email/sendgrid.ts`                    | Sends emails such as "forgot password" through SendGrid (see "Email (SendGrid)")       |
@@ -75,6 +76,7 @@ uses to test templates.
 | `deploy/publish-legacy-products.sh`        | Publishes the imported products on the server                                          |
 | `deploy/import-app-page.sh`                | Adds the VgemsAI app page's first version on the server                                |
 | `deploy/import-legal-pages.sh`             | Adds the Privacy Policy and Terms of Use on the server                                 |
+| `deploy/import-offer-codes.sh`             | Adds App Store offer codes from Apple's CSV on the server                              |
 | `deploy/mongodb/create-payload-user.js`    | Creates the MongoDB user for Payload (run on the DB EC2)                               |
 | `scripts/pack-local-packages.mjs`          | Packs `packages/*` into tarballs for the app (used by the Dockerfile)                  |
 
@@ -496,6 +498,96 @@ After a change, `docker compose logs cms` shows `Revalidated website` with the r
 The website reads the API from its own server, so it doesn't need to be in `CORS_ORIGINS`. With uploads in
 S3, set `PAYLOAD_MEDIA_URL` on the website to `S3_PUBLIC_URL` (or `https://<bucket>.s3.<region>.amazonaws.com`
 when that is empty) so it is allowed to load the images.
+
+## App Store offer codes
+
+**App Store → Offer codes** holds one-time-use App Store offer codes, such as the 500 LockinMinder launch codes.
+The personal website's redeem link, `https://www.altawoz.com/lockinminder/redeem`, gives each visitor the next
+available code, marks it **Given out** and sends them to Apple's redeem page, which installs the app with the
+offer. The code is in `src/collections/OfferCodes.ts` and `src/offerCodes/`.
+
+```
+ Visitor ─► website: /lockinminder/redeem ─ taps "Get LockinMinder Pro free" ─► website: /api/lockinminder/redeem
+                                                                                  │ POST /api/offer-codes/claim
+                                                                                  ▼ (X-API-Key)
+                                                            CMS: the next available code becomes "Given out"
+ Visitor ◄─ App Store: https://apps.apple.com/redeem?...&code=<code> ◄────────────┘
+```
+
+Opening the link gives nothing away: only the button does, so link previews (iMessage, Slack, LinkedIn) and email
+link scanners don't use up codes. A visitor who taps again gets the same code back (the website remembers it in a
+cookie), and one network (IP address, or IPv6 /64) gets at most 10 codes in 24 hours
+(`OFFER_CODES_PER_NETWORK_PER_DAY`). The CMS keeps only a keyed hash of that network, never the IP address.
+
+### Setting it up (once)
+
+1. Generate a key: `openssl rand -hex 32`.
+2. CMS `.env`: `OFFER_CODES_API_KEY=<key>`, then `./deploy/deploy.sh`.
+3. Website: set `OFFER_CODES_API_KEY=<key>` (next to its `PAYLOAD_URL`) and redeploy it.
+
+Until both have the key, the redeem page still works but says that codes aren't available, with a plain App Store
+button, and the CMS answers 404 on the offer code endpoints.
+
+### Importing codes
+
+App Store Connect exports the codes as a CSV with one `code,redeem link` per line. Copy it to the app server and
+import it there; **never commit it**, since every code in it is a free unlock.
+
+```bash
+scp OfferCodeOneTimeUseCodes_*.csv <user>@<app-server>:~/offer-codes.csv
+
+cd ~/payloadcms/apps/cms
+./deploy/import-offer-codes.sh ~/offer-codes.csv --dry-run                         # checks every line, saves nothing
+./deploy/import-offer-codes.sh ~/offer-codes.csv --batch "Launch, November 2026"   # imports
+rm ~/offer-codes.csv
+```
+
+- Every line is checked first. A line that isn't a code, or a redeem link of another app (its `id` isn't the app's
+  Apple ID, `6830228333` for LockinMinder), stops the import before anything is saved.
+- Codes already in the CMS are skipped, so running it again, or importing a file that overlaps an earlier one, is
+  safe and never makes a given-out code available again.
+- `--expires YYYY-MM-DD`: the expiry date App Store Connect shows for the codes. They aren't given out from that
+  day on. It can also be set per code in the admin panel.
+- `--app <app>` for codes of another app, once it is in `offerCodeApps` (`src/offerCodes/offerCodes.ts`).
+
+Locally, run `pnpm payload run scripts/import-offer-codes.ts <file.csv> [options]` in this folder instead.
+
+### Tracking codes
+
+Above the list, **Offer codes** shows per app how many codes are available, how many were given out (and how many
+in the last 24 hours), and how many are disabled or expired. The list starts with the codes given out most recently.
+
+| Status    | Meaning                                                                        |
+| --------- | ------------------------------------------------------------------------------ |
+| Available | Not given out yet; the redeem link hands these out                             |
+| Given out | A visitor received it (**Given out** says when, **Given out through** how)     |
+| Disabled  | Never given out, e.g. a code you want to keep back                             |
+
+Apple doesn't tell the CMS whether a code was actually redeemed, so **Given out** means that someone received it.
+
+- **Give a code by hand** (e.g. to a reviewer): open an available code, copy its **Redeem link**, set the status to
+  **Given out** and save. The time and "By hand" are filled in; add who you gave it to under **Note**.
+- **Hand a code out again**, e.g. one that someone never used: set it back to **Available**.
+- **Filter** the list by status or batch with **Filters**, and search it by code, batch or note.
+
+### Endpoints
+
+For the website's server only, with `X-API-Key: <OFFER_CODES_API_KEY>`:
+
+```bash
+# Gives out the next available code. `ip` (the visitor's) is optional and is only kept as a hash.
+curl -X POST https://cms.example.com/api/offer-codes/claim -H "X-API-Key: $KEY" \
+  -H 'Content-Type: application/json' -d '{"app": "lockinminder", "ip": "203.0.113.7"}'
+# 200 {"app":"lockinminder","available":499,"claimedAt":"…","code":"ABCD…","url":"https://apps.apple.com/redeem?…"}
+# 410 none left · 429 that network reached its daily limit · 401 wrong key · 404 OFFER_CODES_API_KEY isn't set
+
+# How many codes are left; never the codes themselves
+curl -H "X-API-Key: $KEY" 'https://cms.example.com/api/offer-codes/availability?app=lockinminder'
+# {"app":"lockinminder","available":499,"total":500}
+```
+
+Each claim is a single MongoDB `findOneAndUpdate` on an available code, so two visitors at the same moment never get
+the same one. Trying the claim with curl gives a real code away; set it back to **Available** afterwards.
 
 ## Pages and profiles
 

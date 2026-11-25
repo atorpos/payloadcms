@@ -112,17 +112,17 @@ export type LexicalNodes_8909F562 =
   | SerializedListItemNode<LexicalNodes_8909F562>;
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "LexicalNodes_CCE48C75".
+ * via the `definition` "LexicalNodes_3AC5795B".
  */
-export type LexicalNodes_CCE48C75 =
+export type LexicalNodes_3AC5795B =
   | SerializedTextNode
   | SerializedTabNode
   | SerializedLineBreakNode
-  | SerializedParagraphNode<LexicalNodes_CCE48C75>
+  | SerializedParagraphNode<LexicalNodes_3AC5795B>
   | SerializedHorizontalRuleNode
   | SerializedUploadNode<'media'>
   | SerializedUploadNode<'personal-photos'>
-  | SerializedQuoteNode<LexicalNodes_CCE48C75>
+  | SerializedQuoteNode<LexicalNodes_3AC5795B>
   | SerializedRelationshipNode<
       | 'users'
       | 'posts'
@@ -147,6 +147,7 @@ export type LexicalNodes_CCE48C75 =
       | 'hockey-fantasy-teams'
       | 'hockey-push-notifications'
       | 'hockey-trade-articles'
+      | 'offer-codes'
       | 'vigor-products'
       | 'vigor-services'
       | 'vigor-news'
@@ -156,11 +157,11 @@ export type LexicalNodes_CCE48C75 =
       | 'payload-preferences'
       | 'payload-migrations'
     >
-  | SerializedAutoLinkNode<LexicalNodes_CCE48C75, LexicalLinkFields>
-  | SerializedLinkNode<LexicalNodes_CCE48C75, LexicalLinkFields>
-  | SerializedListNode<LexicalNodes_CCE48C75>
-  | SerializedListItemNode<LexicalNodes_CCE48C75>
-  | SerializedHeadingNode<LexicalNodes_CCE48C75>;
+  | SerializedAutoLinkNode<LexicalNodes_3AC5795B, LexicalLinkFields>
+  | SerializedLinkNode<LexicalNodes_3AC5795B, LexicalLinkFields>
+  | SerializedListNode<LexicalNodes_3AC5795B>
+  | SerializedListItemNode<LexicalNodes_3AC5795B>
+  | SerializedHeadingNode<LexicalNodes_3AC5795B>;
 /**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "LexicalNodes_3DE324E4".
@@ -205,6 +206,7 @@ export interface Config {
     'hockey-fantasy-teams': HockeyFantasyTeam;
     'hockey-push-notifications': HockeyPushNotification;
     'hockey-trade-articles': HockeyTradeArticle;
+    'offer-codes': OfferCode;
     'vigor-products': VigorProduct;
     'vigor-services': VigorService;
     'vigor-news': VigorNewsArticle;
@@ -266,6 +268,7 @@ export interface Config {
     'hockey-fantasy-teams': HockeyFantasyTeamsSelect<false> | HockeyFantasyTeamsSelect<true>;
     'hockey-push-notifications': HockeyPushNotificationsSelect<false> | HockeyPushNotificationsSelect<true>;
     'hockey-trade-articles': HockeyTradeArticlesSelect<false> | HockeyTradeArticlesSelect<true>;
+    'offer-codes': OfferCodesSelect<false> | OfferCodesSelect<true>;
     'vigor-products': VigorProductsSelect<false> | VigorProductsSelect<true>;
     'vigor-services': VigorServicesSelect<false> | VigorServicesSelect<true>;
     'vigor-news': VigorNewsSelect<false> | VigorNewsSelect<true>;
@@ -868,7 +871,7 @@ export interface Profile {
    */
   headline?: string | null;
   photo?: (string | null) | Media;
-  bio?: LexicalRichText<LexicalNodes_CCE48C75> | null;
+  bio?: LexicalRichText<LexicalNodes_3AC5795B> | null;
   links?:
     | {
         platform: 'github' | 'linkedin' | 'youtube' | 'x' | 'website' | 'other';
@@ -2052,6 +2055,53 @@ export interface HockeyTradeArticle {
   createdAt: string;
 }
 /**
+ * One-time-use App Store offer codes. The redeem link on the website gives each visitor the next available code and marks it as given out. Apple doesn’t report redemptions back, so "Given out" means a visitor received the code.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "offer-codes".
+ */
+export interface OfferCode {
+  id: string;
+  /**
+   * The code as Apple wrote it, e.g. ABCD1234EFGH5678JK
+   */
+  code: string;
+  /**
+   * Apple’s link that opens the App Store with the code filled in
+   */
+  url: string;
+  app: 'lockinminder';
+  /**
+   * Which import it came from, e.g. "Launch, November 2026"
+   */
+  batch?: string | null;
+  /**
+   * The expiry date App Store Connect shows for these codes. Expired codes aren’t given out. Optional.
+   */
+  expiresAt?: string | null;
+  /**
+   * e.g. who you gave it to by hand
+   */
+  note?: string | null;
+  /**
+   * Only available codes are given out. Set it back to Available to hand out a code again, e.g. one that was never used.
+   */
+  status: 'available' | 'claimed' | 'disabled';
+  claimedAt?: string | null;
+  claimedVia?: ('link' | 'manual') | null;
+  networkHash?: string | null;
+  createdBy?: {
+    relationTo: 'users';
+    value: string | User;
+  } | null;
+  updatedBy?: {
+    relationTo: 'users';
+    value: string | User;
+  } | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "vigor-products".
  */
@@ -2538,6 +2588,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'hockey-trade-articles';
         value: string | HockeyTradeArticle;
+      } | null)
+    | ({
+        relationTo: 'offer-codes';
+        value: string | OfferCode;
       } | null)
     | ({
         relationTo: 'vigor-products';
@@ -3541,6 +3595,26 @@ export interface HockeyTradeArticlesSelect<T extends boolean = true> {
   capImpact?: T;
   generatedAt?: T;
   editedByEditor?: T;
+  createdBy?: T;
+  updatedBy?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "offer-codes_select".
+ */
+export interface OfferCodesSelect<T extends boolean = true> {
+  code?: T;
+  url?: T;
+  app?: T;
+  batch?: T;
+  expiresAt?: T;
+  note?: T;
+  status?: T;
+  claimedAt?: T;
+  claimedVia?: T;
+  networkHash?: T;
   createdBy?: T;
   updatedBy?: T;
   updatedAt?: T;
@@ -5167,6 +5241,7 @@ export interface CollectionQueryWidget {
       | 'hockey-fantasy-teams'
       | 'hockey-push-notifications'
       | 'hockey-trade-articles'
+      | 'offer-codes'
       | 'vigor-products'
       | 'vigor-services'
       | 'vigor-news'
@@ -5219,6 +5294,7 @@ export interface ActivityWidget {
           | 'hockey-fantasy-teams'
           | 'hockey-push-notifications'
           | 'hockey-trade-articles'
+          | 'offer-codes'
           | 'vigor-products'
           | 'vigor-services'
           | 'vigor-news'
